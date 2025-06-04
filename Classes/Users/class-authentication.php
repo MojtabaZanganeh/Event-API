@@ -1,0 +1,259 @@
+<?php
+namespace Classes\Users;
+use Classes\Base\Base;
+use Classes\Base\Sanitizer;
+use Classes\Base\Database;
+use Classes\Base\Response;
+use Classes\Users\Users;
+use Exception;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+/**
+ * Authentication class handles user authentication processes including
+ * sending verification codes, verifying codes, and JWT authentication.
+ *
+ * @package Classes\Base
+ */
+class Authentication extends Database
+{
+    use Base, Sanitizer;
+
+    private $expires_time = 120;
+
+    /**
+     * Sends a code for authentication.
+     *
+     * This method generates and sends an authentication code to the user's phone number.
+     * The code is stored in the database with the status "pending". 
+     *
+     * @param array $params Array of input parameters, including:
+     *                      - string $params['phone'] User's phone number (required)
+     *                      - string $params['page'] The page for which the code is requested (required)
+     *                      - string $params['send'] Option to send the SMS or not (optional) Default: true
+     * @return void
+     */
+    public function send_code($params)
+    {
+        $this->check_params($params, ['phone']);
+
+        $phone = $this->check_input($params['phone'], 'phone');
+        $page = $params['page'] ?? 'Login';
+        $send_sms = (isset($params['send'])) ? $params['send'] : true;
+
+        $sql = "SELECT * FROM {$this->table['otps']} WHERE `phone` = ? AND `is_used` = '0' AND `page` = ? ORDER BY expires_at DESC LIMIT 1";
+        $execute = [$phone, $page];
+        $stmt = $this->executeStatement($sql, $execute);
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            if (time() < $row['expires_at']) {
+                Response::success('زمان باقی مانده است');
+            }
+        }
+
+        switch ($page) {
+            case 'register':
+            case 'login':
+                $code_length = 5;
+                $sms_pattern = '245189';
+                break;
+
+            case 'delete profile':
+                $code_length = 10;
+                $sms_pattern = '249221';
+                break;
+
+            default:
+                $code_length = 5;
+                $sms_pattern = '245189';
+                break;
+        }
+
+        $rand_code = ($send_sms) ? $this->get_random('int', $code_length) : '11111';
+
+        $expires_at = time() + $this->expires_time;
+
+        $now = $this->current_time();
+
+        $this->beginTransaction();
+
+        $sql = "INSERT INTO {$this->table['otps']} (`phone`, `code`, `expires_at`, `page`, `created_at`) VALUES (?, ?, ?, ?, ?)";
+        $execute = [
+            $phone,
+            $rand_code,
+            $expires_at,
+            $page,
+            $now
+        ];
+
+        $result = $this->insertData($sql, $execute);
+
+        if ($result) {
+            $send_result = $this->send_sms($phone, ["verification-code" => $rand_code], $sms_pattern, $send_sms);
+            if ($send_result && strlen($send_result) >= 10) {
+                $this->commit();
+                Response::success('کد تایید ارسال شد');
+            } else {
+                $this->rollback();
+                Response::error('کد ارسال نشد', ['error_code' => $send_result], 206);
+            }
+        } else {
+            Response::error('کد در پایگاه داده وارد نشد');
+        }
+
+    }
+
+    /**
+     * Verifies the authentication code.
+     *
+     * This method checks the provided code against the stored code in the database.
+     * If the code is valid and hasn't expired, it updates the verification status in the database.
+     * 
+     * @param array $params Array of input parameters, including:
+     *                      - string $params['phone'] User's phone number (required)
+     *                      - string $params['code'] The verification code received by the user (required)
+     * @return void
+     */
+    public function verify_code($params)
+    {
+        $this->check_params($params, ['phone', 'code']);
+
+        $phone = $this->check_input($params['phone'], 'phone');
+        $receive_code = $params['code'];
+        $get_user_data = $params['user'] ?? null;
+
+        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND code = ? ORDER BY expires_at DESC LIMIT 1";
+        $execute = [
+            $phone,
+            $receive_code,
+        ];
+        $row = $this->getData($sql, $execute);
+
+        if ($row) {
+
+            if (time() < $row['expires_at']) {
+                $sql = "UPDATE {$this->table['otps']} SET `is_used` = '1' WHERE `phone` = ? AND  `code` = ?";
+                $execute = [
+                    $phone,
+                    $receive_code
+                ];
+                $insert = $this->insertData($sql, $execute);
+
+                if (!$insert) {
+                    error_log('The code status was not saved in the database: TIME:' . time() . ' PHONE:' . $phone);
+                }
+
+                if ($get_user_data) {
+                    $user_obj = new Users();
+                    $user = $user_obj->get_user_by_phone($phone);
+
+                    if ($user) {
+                        $jwt_token = $this->generate_token([
+                            'user_id' => $user['id'],
+                            'phone' => $user['phone'],
+                            'dormitory' => $user['dormitory'],
+                            'role' => $user['role']
+                        ]);
+                        $user['token'] = $jwt_token;
+
+                        Response::success('کد صحیح است', 'user', $user);
+                    } else {
+                        Response::success('کد صحیح است اما کاربری با این شماره یافت نشد', 'user', null);
+                    }
+
+                }
+
+                Response::success('کد صحیح است');
+
+            } else {
+                Response::error('کد منقضی شده است', null, 408);
+            }
+        } else {
+            Response::error('کد اشتباه است');
+        }
+    }
+
+    public function verify_phone($phone): bool
+    {
+        if (!$phone) {
+            return false;
+        }
+
+        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND is_used = '1' ORDER BY expires_at DESC LIMIT 1";
+        $row = $this->getData($sql, [$phone]);
+
+        if ($row) {
+            if (time() - $row['expires_at'] < 60) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 
+     * 
+     * @param mixed $params Array of input parameters, including:
+     *                      - string | int $params['user_id'] User's id (required)
+     *                      - string $params['phone'] User's phone number (required)
+     *                      - string $params['role'] The verification code received by the user (required)
+     * @return string
+     */
+    public function generate_token($params)
+    {
+        $this->check_params($params, ['user_id', 'phone', 'dormitory', 'role']);
+
+        $user_id = $params['user_id'];
+        $phone = $params['phone'];
+        $dormitory = $params['dormitory'];
+        $role = $params['role'];
+        $time = $params['time'] ?? 86400;
+
+        if ($role !== 'user') {
+            $time = 60 * 60 * 24 * 7;
+        }
+
+        $payload = [
+            'user_id' => $user_id,
+            'phone' => $phone,
+            'dormitory' => $dormitory,
+            'role' => $role,
+            'exp' => time() + $time,
+        ];
+        $jwt_token = JWT::encode($payload, $_ENV['JWT_SECRET_KEY'], 'HS256');
+
+        return 'X7Z09' . $jwt_token;
+    }
+
+    /**
+     * Authenticates the user using a JWT token.
+     *
+     * This method decodes the JWT token and returns the decoded token payload as an object.
+     * If the token is invalid, expired, or malformed, it returns `false`.
+     *
+     * @param string $token The JWT token sent by the user.
+     * @return \stdClass|false Returns the decoded token payload as an object if the token is valid.
+     *                         Returns `false` if the token is invalid, expired, or malformed.
+     * @property int $user_id The ID of the authenticated user.
+     * @property string $phone The phone number of the authenticated user.
+     * @property string $roles The role assigned to the authenticated user.
+     * @throws \Exception If an unexpected error occurs during token decoding.
+     */
+    public function check_token($token)
+    {
+        try {
+            if (preg_match('/X7Z09(\S+)/', $token, $matches) && isset($matches[1])) {
+                $jwt_token = $matches[1];
+                $token_decoded = JWT::decode($jwt_token, new Key($_ENV['JWT_SECRET_KEY'], 'HS256'));
+                return $token_decoded;
+            } else {
+                throw new Exception();
+            }
+        } catch (Exception $e) {
+            Response::error('نشست معتبر نیست');
+        }
+    }
+}

@@ -1,0 +1,22 @@
+# Logs
+*.log
+*log.txt
+*mamad.php
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.env
+
+/composer
+/composer.lock
+/tests/coverage/
+/vendor/
+/Images
