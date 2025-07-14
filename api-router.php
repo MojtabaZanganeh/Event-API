@@ -18,13 +18,9 @@ $router->add('/auth/verify-token', 'POST', 'Classes\Users\Login', 'user_validate
 
 $router->add('/users/edit-profile', 'POST', 'Classes\Users\Users', 'edit_profile');
 
-$router->add('/timeslots/new', 'POST', 'Classes\Timeslots\Timeslots', 'new_timeslot');
-$router->add('/timeslots/get', 'GET', 'Classes\Timeslots\Timeslots', 'get_timeslots');
-$router->add('/timeslots/edit', 'POST', 'Classes\Timeslots\Timeslots', 'edit_timeslot');
-$router->add('/timeslots/delete', 'POST', 'Classes\Timeslots\Timeslots', 'delete_timeslot');
+$router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
+$router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_by_slug');
 
-$router->add('/reservations/add', 'POST', 'Classes\Reservations\Reservations', 'add_reservation');
-$router->add('/reservations/cancel', 'POST', 'Classes\Reservations\Reservations', 'cancel_reservation');
-$router->add('/reservations/manage', 'POST', 'Classes\Reservations\Reservations', function: 'manage_reservations');
-$router->add('/reservations/info', 'GET', 'Classes\Reservations\Reservations', 'reservations_info');
-$router->add('/reservations/recent', 'GET', 'Classes\Reservations\Reservations', 'recent_reservations');
+$router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
+
+$router->add('/conversations/get-user-conversations', 'POST', 'Classes\Conversations\Conversations', 'get_user_conversations');

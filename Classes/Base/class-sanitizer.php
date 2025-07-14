@@ -74,12 +74,22 @@ trait Sanitizer
      */
     public static function check_params(array $params, array $requiredParams)
     {
-        $required_array = array_fill_keys($requiredParams, null);
-        $required_array = array_replace($required_array, array_intersect_key($params, $required_array));
-
-        foreach ($required_array as $value) {
-            if (empty($value)) {
-                Response::not_params($required_array);
+        foreach ($requiredParams as $key) {
+            if (is_array($key)) {
+                $found = false;
+                foreach ($key as $option) {
+                    if (!empty($params[$option])) {
+                        $found = true;
+                        break;
+                    }
+                }
+                if (!$found) {
+                    Response::not_params(['At Least One Required' => $key]);
+                }
+            } else {
+                if (empty($params[$key])) {
+                    Response::not_params([$key => null]);
+                }
             }
         }
     }
@@ -93,8 +103,8 @@ trait Sanitizer
                 }
                 break;
 
-            case 'student_id':
-                if (preg_match('/^\d{9}$/', $value)) {
+            case 'password':
+                if (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $value)) {
                     return $value;
                 }
                 break;

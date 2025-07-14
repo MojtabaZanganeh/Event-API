@@ -31,14 +31,17 @@ class Database
      * @var array
      */
     public $table = [
-        'login_history' => 'login_history',
-        'otps' => 'otps',
-        'payments' => 'payments',
-        'reservations' => 'reservations',
-        'time_slots' => 'time_slots',
+        'events' => 'events',
+        'event_categories' => 'event_categories',
+        'groups' => 'groups',
+        'group_members' => 'group_members',
+        'leaders' => 'leaders',
+        'leader_followers' => 'leader_followers',
+        'messages' => 'messages',
+        'ratings' => 'ratings',
+        'reports' => 'reports',
         'users' => 'users',
-        'wallets' => 'wallets',
-        'wallet_transactions' => 'wallet_transactions',
+        'otps' => 'otps',
     ];
 
     /**

@@ -36,20 +36,16 @@ class Login extends Users
      */
     public function user_register($params)
     {
-        $this->check_params($params, ['first_name', 'last_name', 'student_id', 'phone', 'dormitory']);
-        
+        $this->check_params($params, ['first_name', 'last_name', 'phone', 'password', 'code']);
+
         $first_name = $this->check_input($params['first_name'], 'fa_name');
         $last_name = $this->check_input($params['last_name'], 'fa_name');
-        $student_id = $this->check_input($params['student_id'], 'student_id');
         $phone = $this->check_input($params['phone'], 'phone');
-        $dormitory = $this->check_input($params['dormitory'], 'dormitory');
+        $password = $this->check_input($params['password'], 'password');
+        $code = $params['code'];
 
         $auth_obj = new Authentication();
-        $phone_validate = $auth_obj->verify_phone($phone);
-
-        if (!$phone_validate) {
-            Response::error('شماره اعتبار سنجی نشده است.');
-        }
+        $auth_obj->verify_code(['phone' => $phone, 'code' => $code]);
 
         $user = $this->get_user_by_phone($phone);
         if ($user) {
@@ -58,13 +54,12 @@ class Login extends Users
 
         $now = $this->current_time();
 
-        $sql = "INSERT INTO {$this->table['users']} (`first_name`, `last_name`, `student_id`, `phone`, `dormitory`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO {$this->table['users']} (`first_name`, `last_name`, `phone`, `password`, `registered_at`) VALUES (?, ?, ?, ?, ?)";
         $execute = [
             $first_name,
             $last_name,
-            $student_id,
             $phone,
-            $dormitory,
+            password_hash($password, PASSWORD_DEFAULT),
             $now
         ];
 
@@ -75,7 +70,6 @@ class Login extends Users
             $jwt_token = $jwt_obj->generate_token([
                 'user_id' => $user_id,
                 'phone' => $phone,
-                'dormitory' => $dormitory,
                 'role' => 'user'
             ]);
 
@@ -84,8 +78,6 @@ class Login extends Users
                 'first_name' => $first_name,
                 'last_name' => $last_name,
                 'phone' => $phone,
-                'student_id' => $student_id,
-                'dormitory' => $dormitory,
                 'role' => 'user',
                 'token' => $jwt_token,
             ];
@@ -110,8 +102,8 @@ class Login extends Users
      */
     public function user_login($params)
     {
-        $this->check_params($params, ['phone']);
-        
+        $this->check_params($params, ['phone', ['password', 'code']]);
+
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $params['password'] ?? null;
         $code = $params['code'] ?? null;
