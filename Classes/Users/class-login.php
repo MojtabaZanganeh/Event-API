@@ -43,9 +43,10 @@ class Login extends Users
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $this->check_input($params['password'], 'password');
         $code = $params['code'];
+        $username = "user_$phone";
 
         $auth_obj = new Authentication();
-        $auth_obj->verify_code(['phone' => $phone, 'code' => $code]);
+        $auth_obj->verify_code(['phone' => $phone, 'code' => $code, 'response' => false]);
 
         $user = $this->get_user_by_phone($phone);
         if ($user) {
@@ -54,8 +55,9 @@ class Login extends Users
 
         $now = $this->current_time();
 
-        $sql = "INSERT INTO {$this->table['users']} (`first_name`, `last_name`, `phone`, `password`, `registered_at`) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO {$this->table['users']} (`username`, `first_name`, `last_name`, `phone`, `password`, `registered_at`) VALUES (?, ?, ?, ?, ?, ?)";
         $execute = [
+            $username,
             $first_name,
             $last_name,
             $phone,
@@ -70,6 +72,7 @@ class Login extends Users
             $jwt_token = $jwt_obj->generate_token([
                 'user_id' => $user_id,
                 'phone' => $phone,
+                'username' => $username,
                 'role' => 'user'
             ]);
 
@@ -78,8 +81,7 @@ class Login extends Users
                 'first_name' => $first_name,
                 'last_name' => $last_name,
                 'phone' => $phone,
-                'role' => 'user',
-                'token' => $jwt_token,
+                'role' => 'user'
             ];
 
             Response::success('ثبت نام کاربر با موفقیت انجام شد', 'user', $user);
@@ -102,20 +104,13 @@ class Login extends Users
      */
     public function user_login($params)
     {
-        $this->check_params($params, ['phone', ['password', 'code']]);
+        $this->check_params($params, ['phone', ['code', 'password' ]]);
 
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $params['password'] ?? null;
         $code = $params['code'] ?? null;
 
-        if (!$password && !$code) {
-            Response::error('خطا در دریافت اطلاعات اعتبارسنجی');
-        }
-
         $user = $this->get_user_by_phone($phone);
-        if (!$user) {
-            Response::error('کاربری با این شماره موبایل یافت نشد');
-        }
 
         $auth_obj = new Authentication();
 
@@ -124,27 +119,28 @@ class Login extends Users
                 [
                     'phone' => $phone,
                     'code' => $code,
-                    'user' => true
+                    'user' => true,
+                    'response' => false
                 ]
             );
-        } else {
-
-            if ($this->check_password($phone, $password) === false) {
-                Response::error('رمز عبور اشتباه است');
-                return;
+            if (!$user) {
+                Response::error('کاربری با این شماره موبایل یافت نشد');
             }
-
-            $jwt_token = $auth_obj->generate_token([
-                'user_id' => $user['id'],
-                'phone' => $user['phone'],
-                'dormitory' => $user['dormitory'],
-                'role' => $user['role']
-            ]);
-            $user['token'] = $jwt_token;
-
-            Response::success('ورود با موفقیت انجام شد', 'user', $user);
+        } else {
+            if ($this->check_password($phone, $password) === false) {
+                Response::error('شماره موبایل یا رمز عبور اشتباه است');
+            }
         }
 
+        $jwt_token = $auth_obj->generate_token([
+            'user_id' => $user['id'],
+            'phone' => $user['phone'],
+            'username' => $user['username'],
+            'role' => $user['role']
+        ]);
+        $user['token'] = $jwt_token;
+
+        Response::success('ورود با موفقیت انجام شد', 'user', $user);
     }
 
     public function user_validate($params)

@@ -123,6 +123,7 @@ class Authentication extends Database
         $phone = $this->check_input($params['phone'], 'phone');
         $receive_code = $params['code'];
         $get_user_data = $params['user'] ?? null;
+        $get_success_response = $params['response'] ?? null;
 
         $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND code = ? ORDER BY expires_at DESC LIMIT 1";
         $execute = [
@@ -153,20 +154,22 @@ class Authentication extends Database
                         $jwt_token = $this->generate_token([
                             'user_id' => $user['id'],
                             'phone' => $user['phone'],
-                            'dormitory' => $user['dormitory'],
                             'role' => $user['role']
                         ]);
                         $user['token'] = $jwt_token;
 
-                        Response::success('کد صحیح است', 'user', $user);
+                        if ($get_success_response) {
+                            Response::success('کد صحیح است', 'user', $user);
+                        }
+
                     } else {
                         Response::success('کد صحیح است اما کاربری با این شماره یافت نشد', 'user', null);
                     }
 
                 }
-
-                Response::success('کد صحیح است');
-
+                if ($get_success_response) {
+                    Response::success('کد صحیح است');
+                }
             } else {
                 Response::error('کد منقضی شده است', null, 408);
             }
@@ -204,28 +207,24 @@ class Authentication extends Database
      */
     public function generate_token($params)
     {
-        $this->check_params($params, ['user_id', 'phone', 'dormitory', 'role']);
+        $this->check_params($params, ['user_id', 'phone', 'username', 'role']);
 
         $user_id = $params['user_id'];
         $phone = $params['phone'];
-        $dormitory = $params['dormitory'];
+        $username = $params['username'];
         $role = $params['role'];
-        $time = $params['time'] ?? 86400;
-
-        if ($role !== 'user') {
-            $time = 60 * 60 * 24 * 7;
-        }
+        $time = $params['time'] ?? 60 * 60 * 24 * 7;
 
         $payload = [
             'user_id' => $user_id,
             'phone' => $phone,
-            'dormitory' => $dormitory,
+            'username' => $username,
             'role' => $role,
             'exp' => time() + $time,
         ];
         $jwt_token = JWT::encode($payload, $_ENV['JWT_SECRET_KEY'], 'HS256');
 
-        return 'X7Z09' . $jwt_token;
+        return 'EVT09' . $jwt_token;
     }
 
     /**
@@ -245,7 +244,7 @@ class Authentication extends Database
     public function check_token($token)
     {
         try {
-            if (preg_match('/X7Z09(\S+)/', $token, $matches) && isset($matches[1])) {
+            if (preg_match('/EVT09(\S+)/', $token, $matches) && isset($matches[1])) {
                 $jwt_token = $matches[1];
                 $token_decoded = JWT::decode($jwt_token, new Key($_ENV['JWT_SECRET_KEY'], 'HS256'));
                 return $token_decoded;

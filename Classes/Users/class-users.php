@@ -18,7 +18,7 @@ class Users extends Database
     use Sanitizer;
     private $user_id;
 
-    private const USER_COLUMNS = 'id, first_name, last_name, student_id, phone, dormitory, role, created_at';
+    private const USER_COLUMNS = 'id, username, first_name, last_name, gender, phone, password, national_id, birth_date, role, avatar, is_active, registered_at';
 
     public function __construct($user_id = null)
     {

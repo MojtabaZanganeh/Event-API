@@ -2,6 +2,7 @@
 CREATE TABLE
     users (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(32) UNIQUE NOT NULL,
         phone VARCHAR(12) UNIQUE NOT NULL,
         first_name VARCHAR(100),
         last_name VARCHAR(100),
@@ -9,6 +10,18 @@ CREATE TABLE
         role ENUM ('user', 'leader', 'admin') DEFAULT 'user',
         is_active BOOLEAN DEFAULT TRUE,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE = InnoDB;
+
+-- جدول OTP برای ورود با شماره موبایل
+CREATE TABLE
+    otps (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        phone VARCHAR(12) NOT NULL,
+        code VARCHAR(6) NOT NULL,
+        expires_at INT UNSIGNED NOT NULL,
+        is_used BOOLEAN DEFAULT FALSE,
+        page VARCHAR(15) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE = InnoDB;
 
 -- نوع رویداد
@@ -79,8 +92,7 @@ CREATE TABLE
         bio TEXT,
         rating_avg FLOAT DEFAULT 0,
         rating_count INT DEFAULT 0,
-        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
 -- دنبال کنندگان لیدرها

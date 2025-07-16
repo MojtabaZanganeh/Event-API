@@ -2,10 +2,11 @@
 CREATE TABLE
     users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        phone VARCHAR(12) UNIQUE NOT NULL,
+        username VARCHAR(32) UNIQUE NOT NULL,
         first_name VARCHAR(100),
         last_name VARCHAR(100),
-        national_id VARCHAR(10) UNIQUE NOT NULL,
+        phone VARCHAR(12) UNIQUE NOT NULL,
+        national_id VARCHAR(10) UNIQUE,
         role ENUM ('user', 'leader', 'admin') DEFAULT 'user',
         is_active BOOLEAN DEFAULT TRUE,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
