@@ -1,6 +1,5 @@
 <?php
 namespace Classes\Users;
-use Classes\Base\Database;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
 use Exception;
@@ -12,7 +11,7 @@ use Exception;
  *
  * @package Classes\User
  */
-class Users extends Database
+class Users extends Authentication
 {
 
     use Sanitizer;
@@ -74,30 +73,27 @@ class Users extends Database
                 throw new Exception();
             }
 
-            $auth_obj = new Authentication();
-            $token_decoded = $auth_obj->check_token($token);
+            $token_decoded = $this->check_token($token);
 
-            $user = $this->get_user_by_id($token_decoded->user_id, 'dormitory, role');
-            if (!$user || $user['dormitory'] != $token_decoded->dormitory || $user['role'] != $token_decoded->role) {
+            if (!$token_decoded) {
+                throw new Exception();
+            }
+
+            $user = $this->get_user_by_id($token_decoded->user_id, 'username, role');
+            if (
+                !$user ||
+                $token_decoded->exp < time() ||
+                !isset($token_decoded->role, $token_decoded->username) ||
+                $user['username'] != $token_decoded->username ||
+                $user['role'] != $token_decoded->role
+            ) {
                 throw new Exception();
             }
 
             $hasAccess = match ($role) {
-                'user' => $token_decoded &&
-                $token_decoded->exp > time() &&
-                isset($token_decoded->role, $token_decoded->dormitory) &&
-                ($token_decoded->role === 'user' || str_contains($token_decoded->role, 'admin')),
-
-                'admin' => $token_decoded &&
-                $token_decoded->exp > time() &&
-                isset($token_decoded->role, $token_decoded->dormitory) &&
-                $token_decoded->role === 'admin',
-
-                'admin-dormitory' => $token_decoded &&
-                $token_decoded->exp > time() &&
-                isset($token_decoded->role, $token_decoded->dormitory) &&
-                ($token_decoded->role === 'admin' || $token_decoded->role === 'admin-' . $token_decoded->dormitory),
-
+                'user' => ($token_decoded->role === 'user' || $token_decoded->role === 'admin'),
+                'leader' => ($token_decoded->role === 'leader'),
+                'admin' => $token_decoded->role === 'admin',
                 default => false,
             };
 

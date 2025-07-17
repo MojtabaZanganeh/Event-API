@@ -4,7 +4,6 @@ use Classes\Base\Base;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
 use Classes\Users\Users;
-use Classes\Users\Authentication;
 
 /**
  * Class Login
@@ -45,8 +44,7 @@ class Login extends Users
         $code = $params['code'];
         $username = "user_$phone";
 
-        $auth_obj = new Authentication();
-        $auth_obj->verify_code(['phone' => $phone, 'code' => $code, 'response' => false]);
+        $this->verify_code(['phone' => $phone, 'code' => $code, 'response' => false]);
 
         $user = $this->get_user_by_phone($phone);
         if ($user) {
@@ -68,8 +66,7 @@ class Login extends Users
         $user_id = $this->insertData($sql, $execute);
 
         if ($user_id) {
-            $jwt_obj = new Authentication();
-            $jwt_token = $jwt_obj->generate_token([
+            $jwt_token = $this->generate_token([
                 'user_id' => $user_id,
                 'phone' => $phone,
                 'username' => $username,
@@ -112,10 +109,8 @@ class Login extends Users
 
         $user = $this->get_user_by_phone($phone);
 
-        $auth_obj = new Authentication();
-
         if ($code) {
-            $auth_obj->verify_code(
+            $this->verify_code(
                 [
                     'phone' => $phone,
                     'code' => $code,
@@ -132,7 +127,7 @@ class Login extends Users
             }
         }
 
-        $jwt_token = $auth_obj->generate_token([
+        $jwt_token = $this->generate_token([
             'user_id' => $user['id'],
             'phone' => $user['phone'],
             'username' => $user['username'],
@@ -149,8 +144,7 @@ class Login extends Users
 
         $token = $params['token'];
 
-        $token_obj = new Authentication();
-        $token_decoded = $token_obj->check_token($token);
+        $token_decoded = $this->check_token($token);
 
         $user = $this->get_user_by_phone($token_decoded->phone);
 

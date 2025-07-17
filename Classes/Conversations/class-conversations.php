@@ -1,19 +1,17 @@
 <?php
 namespace Classes\Conversations;
+use Classes\Users\Users;
 use Classes\Base\Base;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
-use Classes\Users\Users;
 
 class Conversations extends Users
 {
     use Base, Sanitizer;
 
-    public function get_user_conversations($params)
+    public function get_user_conversations()
     {
-        $this->check_params($params, ['user_id']);
-        
-        $user_id = $params['user_id'];
+        $user = $this->check_role();
 
         $sql =
             "SELECT 
@@ -60,12 +58,33 @@ class Conversations extends Users
             WHERE cp.user_id = ?
             ORDER BY m.created_at DESC;";
 
-        $conversations = $this->getData($sql, [$user_id, $user_id, $user_id], true);
+        $conversations = $this->getData($sql, [$user->user_id, $user->user_id, $user->user_id], true);
 
         foreach ($conversations as &$conversation) {
             $conversation['last_message'] = json_decode($conversation['last_message']);
         }
+
         Response::success('گفتگوها با موفقیت دریافت شد', 'allConversations', $conversations);
+    }
+
+    public function get_conversation_messages()
+    {
+        Response::success('گفتگوها با موفقیت دریافت شد', 'allConversations', [
+            [
+                'sender' => 'محمد',
+                'avatar' => '/u2.jpg',
+                'text' => 'سلام',
+                'time' => '2025/05/05 20:13',
+                'is_self' => true
+            ],
+            [
+                'sender' => 'محمد',
+                'avatar' => '/u2.jpg',
+                'text' => 'سلام',
+                'time' => '2025/05/05 20:13',
+                'is_self' => false
+            ]
+        ]);
     }
 
 }
