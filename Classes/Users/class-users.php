@@ -65,7 +65,7 @@ class Users extends Authentication
         return password_verify($password, $user['password']);
     }
 
-    public function check_role($role = 'user', $token = null)
+    public function check_role($roles = ['user'], $token = null)
     {
         try {
             $token = is_null($token) ? getallheaders()['Authorization'] : $token;
@@ -79,7 +79,7 @@ class Users extends Authentication
                 throw new Exception();
             }
 
-            $user = $this->get_user_by_id($token_decoded->user_id, 'username, role');
+            $user = $this->get_user_by_id($token_decoded->user_id);
             if (
                 !$user ||
                 $token_decoded->exp < time() ||
@@ -90,18 +90,20 @@ class Users extends Authentication
                 throw new Exception();
             }
 
-            $hasAccess = match ($role) {
-                'user' => ($token_decoded->role === 'user' || $token_decoded->role === 'admin'),
-                'leader' => ($token_decoded->role === 'leader'),
-                'admin' => $token_decoded->role === 'admin',
-                default => false,
-            };
+            foreach($roles as $role) {
+                $hasAccess[] = match ($role) {
+                    'user' => ($token_decoded->role === 'user' || $token_decoded->role === 'admin'),
+                    'leader' => ($token_decoded->role === 'leader'),
+                    'admin' => $token_decoded->role === 'admin',
+                    default => false,
+                };
+            }
 
-            if (!$hasAccess) {
+            if (!in_array(true, $hasAccess)) {
                 throw new Exception();
             }
 
-            return $token_decoded;
+            return $user;
         } catch (Exception $e) {
             Response::error('شما دسترسی لازم را ندارید');
         }

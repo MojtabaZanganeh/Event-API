@@ -33,8 +33,8 @@ class Database
     public $table = [
         'events' => 'events',
         'event_categories' => 'event_categories',
-        'groups' => 'groups',
-        'group_members' => 'group_members',
+        'conversations' => 'conversations',
+        'conversation_participants' => 'conversation_participants',
         'leaders' => 'leaders',
         'leader_followers' => 'leader_followers',
         'messages' => 'messages',

@@ -24,4 +24,5 @@ $router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_
 $router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
 
 $router->add('/conversations/get-user-conversations', 'GET', 'Classes\Conversations\Conversations', 'get_user_conversations');
-$router->add('/conversations/get-conversation-messages', 'GET', 'Classes\Conversations\Conversations', 'get_conversation_messages');
+$router->add('/conversations/get-conversation-messages', 'POST', 'Classes\Conversations\Conversations', 'get_conversation_messages');
+$router->add('/conversations/send-message-to-conversation', 'POST', 'Classes\Conversations\Conversations', 'send_message_to_conversation');

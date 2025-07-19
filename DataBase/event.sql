@@ -1,7 +1,7 @@
 -- کاربران
 CREATE TABLE
     users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(32) UNIQUE NOT NULL,
         first_name VARCHAR(100),
         last_name VARCHAR(100),
@@ -27,22 +27,22 @@ CREATE TABLE
 -- نوع رویداد
 CREATE TABLE
     event_categories (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL
     ) ENGINE = InnoDB;
 
 -- رویدادها
 CREATE TABLE
     events (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(150) NOT NULL,
         description TEXT,
-        event_type_id INT,
+        event_type_id INT UNSIGNED,
         location VARCHAR(255),
         start_time DATETIME NOT NULL,
         end_time DATETIME,
         capacity INT DEFAULT 50,
-        creator_id INT,
+        creator_id INT UNSIGNED,
         image_url VARCHAR(255),
         is_public BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -53,10 +53,10 @@ CREATE TABLE
 -- گفتگوها
 CREATE TABLE
     conversations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         is_group BOOLEAN DEFAULT FALSE,
         name VARCHAR(255),
-        event_id INT,
+        event_id INT UNSIGNED,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (event_id) REFERENCES events (id)
     ) ENGINE = InnoDB;
@@ -64,9 +64,9 @@ CREATE TABLE
 -- اعضای گفتگو
 CREATE TABLE
     conversation_participants (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        conversation_id INT NOT NULL,
-        user_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        conversation_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -75,21 +75,25 @@ CREATE TABLE
 -- پیام ها
 CREATE TABLE
     messages (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        conversation_id INT NOT NULL,
-        sender_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        conversation_id INT UNSIGNED NOT NULL,
+        sender_id INT UNSIGNED NOT NULL,
         content TEXT,
+        reply_to INT UNSIGNED DEFAULT NULL,
+        read tinyint (1) NOT NULL DEFAULT '0',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
         FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (reply_to) REFERENCES messages (id) ON DELETE CASCADE
     ) ENGINE = InnoDB;
 
 -- لیدرها
 CREATE TABLE
     leaders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
         bio TEXT,
+        categories_id JSON NOT NULL,
         rating_avg FLOAT DEFAULT 0,
         rating_count INT DEFAULT 0,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP FOREIGN KEY (user_id) REFERENCES users (id)
@@ -98,9 +102,9 @@ CREATE TABLE
 -- دنبال کنندگان لیدرها
 CREATE TABLE
     leader_followers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        leader_id INT NOT NULL,
-        follower_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        leader_id INT UNSIGNED NOT NULL,
+        follower_id INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (leader_id) REFERENCES users (id),
         FOREIGN KEY (follower_id) REFERENCES users (id),
@@ -110,10 +114,10 @@ CREATE TABLE
 -- نمره دهی
 CREATE TABLE
     ratings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        from_user_id INT NOT NULL,
-        to_user_id INT NOT NULL,
-        group_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        from_user_id INT UNSIGNED NOT NULL,
+        to_user_id INT UNSIGNED NOT NULL,
+        group_id INT UNSIGNED NOT NULL,
         score INT CHECK (score BETWEEN 1 AND 5),
         comment TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -125,10 +129,10 @@ CREATE TABLE
 -- گزارش ها
 CREATE TABLE
     reports (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        reporter_id INT NOT NULL,
-        reported_user_id INT,
-        reported_group_id INT,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        reporter_id INT UNSIGNED NOT NULL,
+        reported_user_id INT UNSIGNED,
+        reported_group_id INT UNSIGNED,
         reason TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (reporter_id) REFERENCES users (id),
@@ -139,9 +143,9 @@ CREATE TABLE
 -- جدول پست ها
 CREATE TABLE
     posts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        event_id INT,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
+        event_id INT UNSIGNED,
         caption TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -152,8 +156,8 @@ CREATE TABLE
 -- جدول رسانه های پست
 CREATE TABLE
     post_media (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        post_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        post_id INT UNSIGNED NOT NULL,
         media_type ENUM ('image', 'video') NOT NULL,
         media_url VARCHAR(255) NOT NULL,
         thumbnail_url VARCHAR(255),
@@ -164,9 +168,9 @@ CREATE TABLE
 -- جدول لایک های پست
 CREATE TABLE
     post_likes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        post_id INT NOT NULL,
-        user_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        post_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts (id),
         FOREIGN KEY (user_id) REFERENCES users (id),
@@ -176,9 +180,9 @@ CREATE TABLE
 -- جدول کامنت های پست
 CREATE TABLE
     post_comments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        post_id INT NOT NULL,
-        user_id INT NOT NULL,
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        post_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts (id),
