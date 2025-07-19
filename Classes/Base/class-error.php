@@ -9,7 +9,7 @@ class Error
 
     public function __construct()
     {
-        $this->log_file = 'Log/log.txt';
+        $this->log_file = 'Logs/log.txt';
         set_error_handler([$this, 'error_handler']);
         set_exception_handler([$this, 'exception_handler']);
     }
