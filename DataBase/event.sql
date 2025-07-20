@@ -78,7 +78,7 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         conversation_id INT UNSIGNED NOT NULL,
         sender_id INT UNSIGNED NOT NULL,
-        content TEXT,
+        text TEXT,
         reply_to INT UNSIGNED DEFAULT NULL,
         read tinyint (1) NOT NULL DEFAULT '0',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

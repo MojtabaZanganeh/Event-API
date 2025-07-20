@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS `messages` (
   `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
   `conversation_id` int UNSIGNED NOT NULL,
   `sender_id` int UNSIGNED NOT NULL,
-  `content` text COLLATE utf8mb4_bin,
+  `text` text COLLATE utf8mb4_bin,
   `reply_to` int UNSIGNED DEFAULT NULL,
   `read` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS `messages` (
 -- Dumping data for table `messages`
 --
 
-INSERT INTO `messages` (`id`, `conversation_id`, `sender_id`, `content`, `reply_to`, `read`, `created_at`) VALUES
+INSERT INTO `messages` (`id`, `conversation_id`, `sender_id`, `text`, `reply_to`, `read`, `created_at`) VALUES
 (1, 1, 1, 'سلام', NULL, 0, '2025-07-11 17:41:40'),
 (2, 1, 3, 'سلام داداش', NULL, 0, '2025-07-11 17:41:40'),
 (3, 1, 1, 'خوبی؟', NULL, 0, '2025-07-18 19:39:46'),

@@ -41,7 +41,7 @@ class Conversations extends Users
                 END AS avatar,
                 c.is_group,
                  JSON_OBJECT(
-                    'text', m.content,
+                    'text', m.text,
                     'time', m.created_at
                 ) AS last_message,
                 CONCAT(u.first_name, ' ', u.last_name) AS last_sender_name
@@ -84,36 +84,62 @@ class Conversations extends Users
         }
 
         if ($is_group['is_group']) {
-            $messages = $this->getData("
-            SELECT 
-                m.id, 
-                m.conversation_id, 
-                m.content AS text, 
-                m.sender_id, 
-                m.reply_to, 
-                m.read, 
-                m.created_at,
-                u.name AS sender_name,
-                u.avatar AS sender_avatar
-            FROM {$this->table['messages']} m
-            JOIN {$this->table['users']} u ON m.sender_id = u.id
-            WHERE m.conversation_id = ?
-            ORDER BY m.id ASC
-        ", [$conversation_id], true);
+            $messages = $this->getData(
+                "
+                SELECT 
+                    m.id,
+                    m.conversation_id,
+                    m.text,
+                    m.sender_id,
+                    CONCAT(us.first_name, ' ', us.last_name) AS sender_name,
+                    us.avatar AS sender_avatar,
+                    m.reply_to,
+                    m.read,
+                    m.created_at,
+
+                    r.id AS reply_id,
+                    r.text AS reply_text,
+                    CONCAT(ur.first_name, ' ', ur.last_name) AS reply_sender_name
+
+                FROM {$this->table['messages']} m
+                JOIN {$this->table['users']} us ON m.sender_id = us.id
+
+                LEFT JOIN {$this->table['messages']} r ON m.reply_to = r.id
+                LEFT JOIN {$this->table['users']} ur ON r.sender_id = ur.id
+
+                WHERE m.conversation_id = ?
+                ORDER BY m.id ASC",
+                [$conversation_id],
+                true
+            );
         } else {
-            $messages = $this->getData("
-            SELECT 
-                m.id, 
-                m.conversation_id, 
-                m.content AS text, 
-                m.sender_id, 
-                m.reply_to, 
-                m.read, 
-                m.created_at
-            FROM {$this->table['messages']} m
-            WHERE m.conversation_id = ?
-            ORDER BY m.id ASC
-        ", [$conversation_id], true);
+            $messages = $this->getData(
+                "
+                SELECT 
+                    m.id,
+                    m.conversation_id,
+                    m.text,
+                    m.sender_id,
+                    CONCAT(us.first_name, ' ', us.last_name) AS sender_name,
+                    m.reply_to,
+                    m.read,
+                    m.created_at,
+
+                    r.id AS reply_id,
+                    r.text AS reply_text,
+                    CONCAT(ur.first_name, ' ', ur.last_name) AS reply_sender_name
+
+                FROM {$this->table['messages']} m
+
+                LEFT JOIN {$this->table['messages']} r ON m.reply_to = r.id
+                LEFT JOIN {$this->table['users']} ur ON r.sender_id = ur.id
+                LEFT JOIN {$this->table['users']} us ON m.sender_id = us.id
+
+                WHERE m.conversation_id = ?
+                ORDER BY m.id ASC",
+                [$conversation_id],
+                true
+            );
         }
 
         if (is_null($messages)) {
@@ -122,12 +148,19 @@ class Conversations extends Users
 
         $formatted = array_map(function ($msg) use ($user_id, $is_group) {
             return [
+                'id' => $msg['id'],
+                'conversation_id' => $msg['id'],
                 'text' => $msg['text'],
                 'time' => date('Y/m/d H:i', strtotime($msg['created_at'])),
                 'is_self' => $msg['sender_id'] == $user_id,
                 'sender' => $is_group['is_group'] ? [
                     'name' => $msg['sender_name'],
                     'avatar' => $msg['sender_avatar']
+                ] : $msg['sender_name'],
+                'reply_to' => $msg['reply_to'] ? [
+                    'id' => $msg['reply_id'],
+                    'sender' => $msg['reply_sender_name'],
+                    'text' => $msg['reply_text']
                 ] : null
             ];
         }, $messages);
@@ -138,23 +171,23 @@ class Conversations extends Users
     public function send_message_to_conversation($params)
     {
         $sender = $this->check_role(['user', 'leader']);
-        file_put_contents('mamad.json', json_encode($sender));
-        $this->check_params($params, ['conversation_id', 'content']);
+        $this->check_params($params, ['conversation_id', 'text']);
 
         $conversation_id = $params['conversation_id'];
-        $content = $params['content'];
+        $text = $params['text'];
+        $reply_to = $params['reply_to'] ?? null;
         $sender_id = $sender['id'];
         $now = $this->current_time();
 
         $message_id = $this->insertData(
-            "INSERT INTO {$this->table['messages']} (`conversation_id`, `content`, `sender_id`, `created_at`) VALUES (?, ?, ?, ?)",
-            [$conversation_id, $content, $sender_id, $now]
+            "INSERT INTO {$this->table['messages']} (`conversation_id`, `sender_id`, `text`, `reply_to`, `created_at`) VALUES (?, ?, ?, ?, ?)",
+            [$conversation_id, $sender_id, $text, $reply_to, $now]
         );
 
         if ($message_id) {
             Response::success('پیام ارسال شد', 'message', [
                 'id' => $message_id,
-                'sender' => $sender['first_name'].' '.$sender['last_name'],
+                'sender' => $sender['first_name'] . ' ' . $sender['last_name'],
                 'avatar' => $sender['avatar']
             ]);
         }
