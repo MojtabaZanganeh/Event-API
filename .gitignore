@@ -19,7 +19,5 @@
 /composer.lock
 /tests/coverage/
 /vendor/
-/Images
 /Import
 /Logs
-/DataBase
