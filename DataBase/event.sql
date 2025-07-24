@@ -3,8 +3,8 @@ CREATE TABLE
     users (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(32) UNIQUE NOT NULL,
-        first_name VARCHAR(100),
-        last_name VARCHAR(100),
+        first_name VARCHAR(25),
+        last_name VARCHAR(25),
         phone VARCHAR(12) UNIQUE NOT NULL,
         national_id VARCHAR(10) UNIQUE,
         role ENUM ('user', 'leader', 'admin') DEFAULT 'user',
@@ -83,8 +83,7 @@ CREATE TABLE
         read tinyint (1) NOT NULL DEFAULT '0',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
-        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
-        FOREIGN KEY (reply_to) REFERENCES messages (id) ON DELETE CASCADE
+        FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE FOREIGN KEY (reply_to) REFERENCES messages (id) ON DELETE CASCADE
     ) ENGINE = InnoDB;
 
 -- لیدرها
@@ -144,9 +143,10 @@ CREATE TABLE
 CREATE TABLE
     posts (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        user_id INT UNSIGNED NOT NULL,
+        uuid VARCHAR(36) NOT NULL user_id INT UNSIGNED NOT NULL,
         event_id INT UNSIGNED,
         caption TEXT,
+        status ENUM ('pending', 'published', 'deleted') DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id),
@@ -161,6 +161,16 @@ CREATE TABLE
         media_type ENUM ('image', 'video') NOT NULL,
         media_url VARCHAR(255) NOT NULL,
         thumbnail_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (post_id) REFERENCES posts (id)
+    ) ENGINE = InnoDB;
+
+-- جدول هشتگ های پست
+CREATE TABLE
+    post_hashtags (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        post_id INT UNSIGNED NOT NULL,
+        hashtag VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts (id)
     ) ENGINE = InnoDB;
@@ -184,6 +194,17 @@ CREATE TABLE
         post_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (post_id) REFERENCES posts (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- جدول ذخیره های پست
+CREATE TABLE
+    post_saved (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        post_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (post_id) REFERENCES posts (id),
         FOREIGN KEY (user_id) REFERENCES users (id)

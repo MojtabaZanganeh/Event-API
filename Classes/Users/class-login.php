@@ -39,8 +39,30 @@ class Login extends Users
 
         $first_name = $this->check_input($params['first_name'], 'fa_name');
         $last_name = $this->check_input($params['last_name'], 'fa_name');
+
+        $first_name_length = mb_strlen($first_name, 'UTF-8');
+        $last_name_length = mb_strlen($first_name, 'UTF-8');
+
+        if ($first_name_length < 2 || $first_name_length > 25 || $last_name_length < 2 || $last_name_length > 25) {
+            Response::error('طول نام و نام خانوادگی غیرمجاز است');
+        } elseif (preg_match('/^[\u0600-\u06FF\s]+$/', $first_name) !== true || preg_match('/^[\u0600-\u06FF\s]+$/', $last_name) !== true) {
+            Response::error('نام و نام خانوادگی فقط باید شامل حروف فارسی باشد');
+        }
+
         $phone = $this->check_input($params['phone'], 'phone');
+
+        if (mb_strlen($phone, 'UTF-8') !== 11 || preg_match('/^09\d{9}$/', $phone) !== true) {
+            Response::error('شماره همراه صحیح نیست');
+        }
+
         $password = $this->check_input($params['password'], 'password');
+
+        if (mb_strlen($password, 'UTF-8') < 8) {
+            Response::error('رمز عبور کوتاه است');
+        } elseif (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $password)) {
+            Response::error('رمز عبور باید شامل حداقل یک حرف بزرگ، یک عدد و یک نماد باشد');
+        }
+
         $code = $params['code'];
         $username = "user_$phone";
 
@@ -66,12 +88,12 @@ class Login extends Users
         $user_id = $this->insertData($sql, $execute);
 
         if ($user_id) {
-            $jwt_token = $this->generate_token([
-                'user_id' => $user_id,
-                'phone' => $phone,
-                'username' => $username,
-                'role' => 'user'
-            ]);
+            // $jwt_token = $this->generate_token([
+            //     'user_id' => $user_id,
+            //     'phone' => $phone,
+            //     'username' => $username,
+            //     'role' => 'user'
+            // ]);
 
             $user = [
                 'id' => $user_id,
@@ -101,7 +123,7 @@ class Login extends Users
      */
     public function user_login($params)
     {
-        $this->check_params($params, ['phone', ['code', 'password' ]]);
+        $this->check_params($params, ['phone', ['code', 'password']]);
 
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $params['password'] ?? null;
