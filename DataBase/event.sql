@@ -5,9 +5,14 @@ CREATE TABLE
         username VARCHAR(32) UNIQUE NOT NULL,
         first_name VARCHAR(25),
         last_name VARCHAR(25),
+        gender ENUM ('male', 'woman'),
         phone VARCHAR(12) UNIQUE NOT NULL,
+        password TEXT NOT NULL,
         national_id VARCHAR(10) UNIQUE,
+        birth_date DATETIME,
         role ENUM ('user', 'leader', 'admin') DEFAULT 'user',
+        rating_avg INT UNSIGNED NOT NULL DEFAULT '0',
+        rating_count INT UNSIGNED NOT NULL DEFAULT '0',
         is_active BOOLEAN DEFAULT TRUE,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE = InnoDB;
