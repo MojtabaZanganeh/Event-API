@@ -3,8 +3,8 @@ CREATE TABLE
     users (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(32) UNIQUE NOT NULL,
-        first_name VARCHAR(25),
-        last_name VARCHAR(25),
+        first_name VARCHAR(25) NOT NULL,
+        last_name VARCHAR(25) NOT NULL,
         gender ENUM ('male', 'woman'),
         phone VARCHAR(12) UNIQUE NOT NULL,
         password TEXT NOT NULL,
@@ -42,17 +42,87 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(150) NOT NULL,
         description TEXT,
-        event_type_id INT UNSIGNED,
-        location VARCHAR(255),
-        start_time DATETIME NOT NULL,
-        end_time DATETIME,
-        capacity INT DEFAULT 50,
-        creator_id INT UNSIGNED,
-        image_url VARCHAR(255),
+        event_type_id INT UNSIGNED NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP,
+        capacity INT UNSIGNED NOT NULL,
+        creator_id INT UNSIGNED NOT NULL,
+        image_url VARCHAR(255) NOT NULL,
         is_public BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
         FOREIGN KEY (creator_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- رزروها
+CREATE TABLE
+    reservations (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        event_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
+        code VARCHAR(10) NOT NULL,
+        status ENUM ('pending-pay', 'paid', 'canceled'),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- پرداخت ها
+CREATE TABLE
+    payments (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        reservation_id INT UNSIGNED NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
+        amount BIGINT UNSIGNED NOT NULL,
+        status ENUM ("pending", "paid", "failed", "canceled") DEFAULT 'pending',
+        authority VARCHAR(36),
+        card_hash VARCHAR(64),
+        card_pan VARCHAR(16),
+        ref_id INT,
+        paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reservation_id) REFERENCES reservations (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- اعلان ها
+CREATE TABLE
+    notifications (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        event_id INT UNSIGNED,
+        reservation_id INT UNSIGNED,
+        pay_id INT UNSIGNED,
+        ticket_id INT UNSIGNED,
+        user_id INT UNSIGNED NOT NULL,
+        title VARCHAR(50) NOT NULL,
+        message TEXT NOT NULL,
+        read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events (id),
+        FOREIGN KEY (reservation_id) REFERENCES reservations (id),
+        FOREIGN KEY (pay_id) REFERENCES payments (id),
+        FOREIGN KEY (ticket_id) REFERENCES support_tickets (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- تیکت های پشتیبانی
+CREATE TABLE
+    support_tickets (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        event_id INT UNSIGNED,
+        user_id INT UNSIGNED NOT NULL,
+        code VARCHAR(10) NOT NULL,
+        status ENUM (
+            'pending',
+            'answered',
+            'user-response',
+            'finished'
+        ) DEFAULT 'pending',
+        priority ENUM ('low', 'medium', 'high') DEFAULT 'medium',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
 -- گفتگوها
