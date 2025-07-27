@@ -75,59 +75,45 @@ class Conversations extends Users
     {
         $user = $this->check_role(['user', 'leader', 'admin']);
         $this->check_params($params, ['conversation_id']);
+
         $conversation_id = $params['conversation_id'];
         $user_id = $user['id'];
 
-        $is_group = $this->getData("SELECT is_group FROM {$this->table['conversations']} WHERE id = ?", [$conversation_id]);
-        if (!$is_group) {
+        $conversation = $this->getData(
+            "SELECT is_group FROM {$this->table['conversations']} WHERE id = ?",
+            [$conversation_id]
+        );
+
+        if (!$conversation) {
             Response::error('چت مورد نظر یافت نشد');
         }
 
-        if ($is_group['is_group']) {
-            $messages = $this->getData(
-                "
-                SELECT 
-                    m.id,
-                    m.conversation_id,
-                    m.text,
-                    m.sender_id,
-                    CONCAT(us.first_name, ' ', us.last_name) AS sender_name,
-                    us.avatar AS sender_avatar,
-                    m.reply_to,
-                    m.read,
-                    m.created_at,
+        $is_group = $conversation['is_group'];
 
-                    r.id AS reply_id,
-                    r.text AS reply_text,
-                    CONCAT(ur.first_name, ' ', ur.last_name) AS reply_sender_name
-
-                FROM {$this->table['messages']} m
-                JOIN {$this->table['users']} us ON m.sender_id = us.id
-
-                LEFT JOIN {$this->table['messages']} r ON m.reply_to = r.id
-                LEFT JOIN {$this->table['users']} ur ON r.sender_id = ur.id
-
-                WHERE m.conversation_id = ?
-                ORDER BY m.id ASC",
-                [$conversation_id],
-                true
-            );
-        } else {
-            $messages = $this->getData(
-                "
-                SELECT 
-                    m.id,
-                    m.conversation_id,
-                    m.text,
-                    m.sender_id,
-                    CONCAT(us.first_name, ' ', us.last_name) AS sender_name,
-                    m.reply_to,
-                    m.read,
-                    m.created_at,
-
-                    r.id AS reply_id,
-                    r.text AS reply_text,
-                    CONCAT(ur.first_name, ' ', ur.last_name) AS reply_sender_name
+        $messages_json = $this->getData(
+            "SELECT 
+                    JSON_OBJECT(
+                        'id', m.id,
+                        'conversation_id', m.conversation_id,
+                        'text', m.text,
+                        'time', DATE_FORMAT(m.created_at, '%Y/%m/%d %H:%i'),
+                        'is_self', (m.sender_id = ?),
+                        'sender', CASE 
+                            WHEN ? = 1 THEN JSON_OBJECT(
+                                'name', CONCAT(us.first_name, ' ', us.last_name),
+                                'avatar', us.avatar
+                            )
+                            ELSE CONCAT(us.first_name, ' ', us.last_name)
+                        END,
+                        'reply_to', CASE 
+                            WHEN m.reply_to IS NOT NULL THEN JSON_OBJECT(
+                                'id', r.id,
+                                'sender', CONCAT(ur.first_name, ' ', ur.last_name),
+                                'text', r.text
+                            )
+                            ELSE NULL
+                        END
+                    ) AS message_data
 
                 FROM {$this->table['messages']} m
 
@@ -136,36 +122,24 @@ class Conversations extends Users
                 LEFT JOIN {$this->table['users']} us ON m.sender_id = us.id
 
                 WHERE m.conversation_id = ?
-                ORDER BY m.id ASC",
-                [$conversation_id],
-                true
-            );
+
+                ORDER BY m.id ASC
+            ",
+            [$user_id, $is_group, $conversation_id],
+            true
+        );
+
+        if ($messages_json === NULL) {
+            Response::success('هنوز پیامی ارسال نکرده‌اید');
         }
 
-        if (is_null($messages)) {
-            Response::success('هنوز پیامی ارسال نکرده اید');
+        $messages = array_column($messages_json, 'message_data');
+
+        foreach ($messages as &$message) {
+            $message = json_decode($message, true);
         }
-
-        $formatted = array_map(function ($msg) use ($user_id, $is_group) {
-            return [
-                'id' => $msg['id'],
-                'conversation_id' => $msg['id'],
-                'text' => $msg['text'],
-                'time' => date('Y/m/d H:i', strtotime($msg['created_at'])),
-                'is_self' => $msg['sender_id'] == $user_id,
-                'sender' => $is_group['is_group'] ? [
-                    'name' => $msg['sender_name'],
-                    'avatar' => $msg['sender_avatar']
-                ] : $msg['sender_name'],
-                'reply_to' => $msg['reply_to'] ? [
-                    'id' => $msg['reply_id'],
-                    'sender' => $msg['reply_sender_name'],
-                    'text' => $msg['reply_text']
-                ] : null
-            ];
-        }, $messages);
-
-        Response::success('پیام‌ها با موفقیت دریافت شد', 'allConversationMessages', $formatted);
+        
+        Response::success('پیام‌ها با موفقیت دریافت شد', 'allConversationMessages', $messages);
     }
 
     public function send_message_to_conversation($params)

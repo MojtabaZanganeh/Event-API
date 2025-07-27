@@ -29,3 +29,5 @@ $router->add('/conversations/send-message-to-conversation', 'POST', 'Classes\Con
 
 $router->add('/memories/get-all', 'POST', 'Classes\Memories\Memories', 'get_memories');
 $router->add('/memories/get-memory-medias', 'POST', 'Classes\Memories\Memories', 'get_memoriy_medias');
+
+$router->add('/reservations/get-user-reservations', 'GET', 'Classes\Reservations\Reservations', 'get_user_reservations');

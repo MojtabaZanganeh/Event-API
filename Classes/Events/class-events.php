@@ -20,10 +20,13 @@ class Events extends Users
                 e.end_time,
                 e.location,
                 ec.name AS category,
-                e.capacity,
-                e.capacity_left,
                 e.image_url,
                 e.price,
+                JSON_OBJECT(
+                    'total', e.capacity,
+                    'filled', COUNT(r.id),
+                    'left', (e.capacity - COUNT(r.id))
+                ) AS capacity,
                 JSON_OBJECT(
                     'name', CONCAT(u.first_name, ' ', u.last_name),
                     'avatar', u.avatar,
@@ -41,11 +44,17 @@ class Events extends Users
             LEFT JOIN {$this->table['event_categories']} ec ON e.event_category_id = ec.id
             LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
             LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
+            LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
             WHERE e.is_public = 1
+            GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
+                e.location, ec.name, e.capacity, e.image_url, e.price,
+                u.first_name, u.last_name, u.avatar, u.registered_at,
+                l.bio, l.rating_avg, l.rating_count
             ORDER BY e.start_time ASC
         ";
         $events = $this->getData($sql, [], true);
         foreach ($events as &$event) {
+            $event['capacity'] = json_decode($event['capacity'], true);
             $event['leader'] = json_decode($event['leader'], true);
         }
         Response::success('رویدادها با موفقیت دریافت شد', 'allEvents', $events);

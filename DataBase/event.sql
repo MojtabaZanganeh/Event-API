@@ -46,6 +46,7 @@ CREATE TABLE
         location VARCHAR(255) NOT NULL,
         start_time TIMESTAMP NOT NULL,
         end_time TIMESTAMP,
+        price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
         image_url VARCHAR(255) NOT NULL,
@@ -62,7 +63,8 @@ CREATE TABLE
         event_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         code VARCHAR(10) NOT NULL,
-        status ENUM ('pending-pay', 'paid', 'canceled'),
+        price BIGINT NOT NULL,
+        status ENUM ('pending-pay', 'paid', 'canceled') DEFAULT 'pending-pay',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (event_id) REFERENCES events (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
@@ -86,6 +88,25 @@ CREATE TABLE
         FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
+-- تیکت های پشتیبانی
+CREATE TABLE
+    support_tickets (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        event_id INT UNSIGNED,
+        user_id INT UNSIGNED NOT NULL,
+        code VARCHAR(10) NOT NULL,
+        status ENUM (
+            'pending',
+            'answered',
+            'user-response',
+            'finished'
+        ) DEFAULT 'pending',
+        priority ENUM ('low', 'medium', 'high') DEFAULT 'medium',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events (id),
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
 -- اعلان ها
 CREATE TABLE
     notifications (
@@ -103,25 +124,6 @@ CREATE TABLE
         FOREIGN KEY (reservation_id) REFERENCES reservations (id),
         FOREIGN KEY (pay_id) REFERENCES payments (id),
         FOREIGN KEY (ticket_id) REFERENCES support_tickets (id),
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    ) ENGINE = InnoDB;
-
--- تیکت های پشتیبانی
-CREATE TABLE
-    support_tickets (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        event_id INT UNSIGNED,
-        user_id INT UNSIGNED NOT NULL,
-        code VARCHAR(10) NOT NULL,
-        status ENUM (
-            'pending',
-            'answered',
-            'user-response',
-            'finished'
-        ) DEFAULT 'pending',
-        priority ENUM ('low', 'medium', 'high') DEFAULT 'medium',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (event_id) REFERENCES events (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 

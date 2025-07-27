@@ -34,12 +34,12 @@ class Memories extends Users
             -- SELECT JSON_ARRAYAGG(
             --         JSON_OBJECT('type', pm.media_type, 'url', pm.media_url)
             --     )
-            --     FROM post_media pm
+            --     FROM {$this->table['post_media']} pm
             --     WHERE pm.post_id = p.id
             -- ) AS medias,
             (
                 SELECT pm.thumbnail_url 
-                FROM post_media pm 
+                FROM {$this->table['post_media']} pm 
                 WHERE pm.post_id = p.id 
                 ORDER BY pm.id 
                 LIMIT 1
@@ -48,26 +48,26 @@ class Memories extends Users
             DATE_FORMAT(p.created_at, '%Y/%m/%d %H:%i') AS created_at,
             (
                 SELECT COUNT(*) 
-                FROM post_likes pl 
+                FROM {$this->table['post_likes']} pl 
                 WHERE pl.post_id = p.id
             ) AS like_count,
             (
                 SELECT COUNT(*) 
-                FROM post_comments pc 
+                FROM {$this->table['post_comments']} pc 
                 WHERE pc.post_id = p.id
             ) AS comment_count,
             (
                 SELECT JSON_ARRAYAGG(ph.hashtag)
-                FROM post_hashtags ph
+                FROM {$this->table['post_hashtags']} ph
                 WHERE ph.post_id = p.id
             ) AS hashtags,
             (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ?) > 0 AS is_liked,
             (SELECT COUNT(*) FROM post_saved ps WHERE ps.post_id = p.id AND ps.user_id = ?) > 0 AS is_saved,
             (SELECT COUNT(*) FROM leader_followers lf WHERE lf.leader_id = u.id AND lf.follower_id = ?) > 0 AS is_following
 
-        FROM posts p
-        JOIN users u ON p.user_id = u.id
-        LEFT JOIN events e ON p.event_id = e.id
+        FROM {$this->table['posts']} p
+        JOIN {$this->table['users']} u ON p.user_id = u.id
+        LEFT JOIN {$this->table['events']} e ON p.event_id = e.id
         WHERE p.status = 'published' $single_mempry";
 
         $memories = $this->getData($sql, isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id], true);
@@ -93,8 +93,8 @@ class Memories extends Users
         $sql = "SELECT 
             pm.media_type AS type,
             pm.media_url AS url
-        FROM posts p
-        JOIN post_media pm ON p.id = pm.post_id
+        FROM {$this->table['posts']} p
+        JOIN {$this->table['post_media']} pm ON p.id = pm.post_id
         WHERE p.uuid = ?
             AND p.status = 'published' 
         ORDER BY pm.id;";

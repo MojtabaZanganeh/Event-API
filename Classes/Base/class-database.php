@@ -31,17 +31,27 @@ class Database
      * @var array
      */
     public $table = [
-        'events' => 'events',
-        'event_categories' => 'event_categories',
         'conversations' => 'conversations',
         'conversation_participants' => 'conversation_participants',
+        'events' => 'events',
+        'event_categories' => 'event_categories',
         'leaders' => 'leaders',
         'leader_followers' => 'leader_followers',
         'messages' => 'messages',
+        'notifications' => 'notifications',
+        'otps' => 'otps',
+        'payments' => 'payments',
+        'posts' => 'posts',
+        'post_comments' => 'post_comments',
+        'post_hashtags' => 'post_hashtags',
+        'post_likes' => 'post_likes',
+        'post_media' => 'post_media',
+        'post_saved' => 'post_saved',
         'ratings' => 'ratings',
         'reports' => 'reports',
+        'reservations' => 'reservations',
+        'support_tickets' => 'support_tickets',
         'users' => 'users',
-        'otps' => 'otps',
     ];
 
     /**
