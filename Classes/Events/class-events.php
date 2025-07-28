@@ -53,11 +53,17 @@ class Events extends Users
             ORDER BY e.start_time ASC
         ";
         $events = $this->getData($sql, [], true);
+
+        if (!$events) {
+            Response::error('رویدادی یافت نشد');
+        }
+
         foreach ($events as &$event) {
             $event['capacity'] = json_decode($event['capacity'], true);
             $event['leader'] = json_decode($event['leader'], true);
         }
-        Response::success('رویدادها با موفقیت دریافت شد', 'allEvents', $events);
+
+        Response::success('رویدادها دریافت شد', 'allEvents', $events);
     }
 
     public function get_event_by_slug($params)
@@ -68,6 +74,10 @@ class Events extends Users
 
         $event = $this->getData("SELECT * FROM {$this->table['events']} WHERE slug = ?", [$slug]);
 
-        Response::success('رویداد با موفقیت دریافت شد', 'event', $event);
+        if (!$event) {
+            Response::error('رویدادی یافت نشد');
+        }
+
+        Response::success('رویداد دریافت شد', 'event', $event);
     }
 }

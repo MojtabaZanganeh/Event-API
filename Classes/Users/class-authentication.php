@@ -213,7 +213,7 @@ class Authentication extends Database
         $phone = $params['phone'];
         $username = $params['username'];
         $role = $params['role'];
-        $time = $params['time'] ?? 60 * 60 * 24 * 7;
+        $time = $params['time'] ? $this->get_timestamp($params['time']) : $this->get_timestamp();
 
         $payload = [
             'user_id' => $user_id,

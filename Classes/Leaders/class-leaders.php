@@ -11,7 +11,7 @@ class Leaders extends Users
 
     public function get_leaders()
     {
-        $sql = 
+        $sql =
             "SELECT
             l.*,
             CONCAT(u.first_name, ' ', u.last_name) AS name,
@@ -39,22 +39,15 @@ class Leaders extends Users
         GROUP BY l.id, u.id;";
 
         $leaders = $this->getData($sql, [], true);
-        
+
+        if (!$leaders) {
+            Response::error('لیدری یافت نشد');
+        }
+
         foreach ($leaders as &$leader) {
             $leader['categories_id'] = json_decode($leader['categories_id']);
             $leader['categories'] = json_decode($leader['categories']);
         }
-        Response::success('رهبران با موفقیت دریافت شد', 'allLeaders', $leaders);
-    }
-
-    public function get_event_by_slug($params)
-    {
-        $this->check_params($params, ['slug']);
-
-        $slug = $params['slug'];
-
-        $event = $this->getData("SELECT * FROM {$this->table['events']} WHERE slug = ?", [$slug]);
-
-        Response::success('رویداد با موفقیت دریافت شد', 'event', $event);
+        Response::success('لیدرها دریافت شد', 'allLeaders', $leaders);
     }
 }

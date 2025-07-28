@@ -11,7 +11,7 @@ class Reservations extends Events
 
     public function get_user_reservations()
     {
-        $user = $this->check_role(['user', 'leader', 'admin']);
+        $user = $this->check_role();
 
         $sql = "SELECT 
                     JSON_OBJECT(
@@ -37,7 +37,11 @@ class Reservations extends Events
                 ORDER BY r.created_at DESC
         ";
         
-        $reservations_json = $this->getData($sql, [1], true);
+        $reservations_json = $this->getData($sql, [$user['id']], true);
+
+        if (!$reservations_json) {
+            Response::error('رزروی یافت نشد');
+        }
 
         $reservations = array_column($reservations_json, 'reservations_data');
 
@@ -45,6 +49,6 @@ class Reservations extends Events
             $reservation = json_decode($reservation, true);
         }
 
-        Response::success('رزروها با موفقیت دریافت شد', 'allReservations', $reservations);
+        Response::success('رزروهای شما دریافت شد', 'allReservations', $reservations);
     }
 }

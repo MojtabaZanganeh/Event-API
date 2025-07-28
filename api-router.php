@@ -16,7 +16,7 @@ $router->add('/auth/register', 'POST', 'Classes\Users\Login', 'user_register');
 $router->add('/auth/login', 'POST', 'Classes\Users\Login', 'user_login');
 $router->add('/auth/verify-token', 'POST', 'Classes\Users\Login', 'user_validate');
 
-$router->add('/users/edit-profile', 'POST', 'Classes\Users\Users', 'edit_profile');
+$router->add('/users/update-profile', 'POST', 'Classes\Users\Users', 'update_profile');
 
 $router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
 $router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_by_slug');
@@ -31,3 +31,9 @@ $router->add('/memories/get-all', 'POST', 'Classes\Memories\Memories', 'get_memo
 $router->add('/memories/get-memory-medias', 'POST', 'Classes\Memories\Memories', 'get_memoriy_medias');
 
 $router->add('/reservations/get-user-reservations', 'GET', 'Classes\Reservations\Reservations', 'get_user_reservations');
+
+$router->add('/transactions/get-user-transactions', 'GET', 'Classes\Reservations\Transactions', 'get_user_transactions');
+
+$router->add('/notifications/get-user-notifications', 'GET', 'Classes\Notifications\Notifications', 'get_user_notifications');
+
+$router->add('/support/tickets/get-user-tickets', 'GET', 'Classes\Support\Tickets', 'get_user_tickets');

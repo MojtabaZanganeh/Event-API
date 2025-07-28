@@ -215,6 +215,23 @@ trait Base
         return $time;
     }
 
+    /**
+     * Calculate time based on input parameters
+     * If time <= 30: number of days is considered
+     * If time > 30: timestamp is considered
+     * 
+     * @param int $time Input parameter
+     * @return int Calculated time
+     */
+    function get_timestamp(int $time = 60 * 60 * 24): int
+    {
+        if ($time <= 30) {
+            return 60 * 60 * 24 * $time;
+        } else {
+            return $time;
+        }
+    }
+
     public function convert_jalali_to_miladi($jalali_date)
     {
         list($year, $month, $day) = explode('/', $jalali_date);

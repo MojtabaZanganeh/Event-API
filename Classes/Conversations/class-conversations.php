@@ -11,7 +11,7 @@ class Conversations extends Users
 
     public function get_user_conversations()
     {
-        $user = $this->check_role(['user', 'leader', 'admin']);
+        $user = $this->check_role();
 
         $sql =
             "SELECT 
@@ -60,20 +60,20 @@ class Conversations extends Users
 
         $conversations = $this->getData($sql, [$user['id'], $user['id'], $user['id']], true);
 
-        if ($conversations) {
-            foreach ($conversations as &$conversation) {
-                $conversation['last_message'] = json_decode($conversation['last_message']);
-            }
-
-            Response::success('گفتگوها با موفقیت دریافت شد', 'allConversations', $conversations);
+        if (!$conversations) {
+            Response::error('گفتگویی یافت نشد');
         }
 
-        Response::error('گفتگویی یافت نشد');
+        foreach ($conversations as &$conversation) {
+            $conversation['last_message'] = json_decode($conversation['last_message']);
+        }
+
+        Response::success('گفتگوها دریافت شد', 'allConversations', $conversations);
     }
 
     public function get_conversation_messages($params)
     {
-        $user = $this->check_role(['user', 'leader', 'admin']);
+        $user = $this->check_role();
         $this->check_params($params, ['conversation_id']);
 
         $conversation_id = $params['conversation_id'];
@@ -129,7 +129,7 @@ class Conversations extends Users
             true
         );
 
-        if ($messages_json === NULL) {
+        if (!$messages_json) {
             Response::success('هنوز پیامی ارسال نکرده‌اید');
         }
 
@@ -138,13 +138,13 @@ class Conversations extends Users
         foreach ($messages as &$message) {
             $message = json_decode($message, true);
         }
-        
-        Response::success('پیام‌ها با موفقیت دریافت شد', 'allConversationMessages', $messages);
+
+        Response::success('پیام‌ها دریافت شد', 'allConversationMessages', $messages);
     }
 
     public function send_message_to_conversation($params)
     {
-        $sender = $this->check_role(['user', 'leader']);
+        $sender = $this->check_role();
         $this->check_params($params, ['conversation_id', 'text']);
 
         $conversation_id = $params['conversation_id'];

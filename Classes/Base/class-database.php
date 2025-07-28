@@ -40,7 +40,6 @@ class Database
         'messages' => 'messages',
         'notifications' => 'notifications',
         'otps' => 'otps',
-        'payments' => 'payments',
         'posts' => 'posts',
         'post_comments' => 'post_comments',
         'post_hashtags' => 'post_hashtags',
@@ -51,6 +50,7 @@ class Database
         'reports' => 'reports',
         'reservations' => 'reservations',
         'support_tickets' => 'support_tickets',
+        'transactions' => 'transactions',
         'users' => 'users',
     ];
 

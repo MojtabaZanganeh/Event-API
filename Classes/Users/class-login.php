@@ -103,7 +103,7 @@ class Login extends Users
                 'role' => 'user'
             ];
 
-            Response::success('ثبت نام کاربر با موفقیت انجام شد', 'user', $user);
+            Response::success('ثبت نام کاربر انجام شد', 'user', $user);
         } else {
             Response::error('ثبت نام کاربر انجام نشد');
         }
@@ -123,11 +123,12 @@ class Login extends Users
      */
     public function user_login($params)
     {
-        $this->check_params($params, ['phone', ['code', 'password']]);
+        $this->check_params($params, ['phone', ['code', 'password'], 'remember']);
 
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $params['password'] ?? null;
         $code = $params['code'] ?? null;
+        $remember = $params['remember'];
 
         $user = $this->get_user_by_phone($phone);
 
@@ -153,11 +154,12 @@ class Login extends Users
             'user_id' => $user['id'],
             'phone' => $user['phone'],
             'username' => $user['username'],
-            'role' => $user['role']
+            'role' => $user['role'],
+            'time' => $remember ? 7 : 1
         ]);
         $user['token'] = $jwt_token;
 
-        Response::success('ورود با موفقیت انجام شد', 'user', $user);
+        Response::success('ورود انجام شد', 'user', $user);
     }
 
     public function user_validate($params)

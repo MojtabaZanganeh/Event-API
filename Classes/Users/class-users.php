@@ -65,7 +65,7 @@ class Users extends Authentication
         return password_verify($password, $user['password']);
     }
 
-    public function check_role($roles = ['user'], $token = null)
+    public function check_role($roles = ['user', 'leader', 'admin'], $token = null)
     {
         try {
             $token = is_null($token) ? getallheaders()['Authorization'] : $token;
@@ -90,7 +90,7 @@ class Users extends Authentication
                 throw new Exception();
             }
 
-            foreach($roles as $role) {
+            foreach ($roles as $role) {
                 $hasAccess[] = match ($role) {
                     'user' => ($token_decoded->role === 'user' || $token_decoded->role === 'admin'),
                     'leader' => ($token_decoded->role === 'leader'),
@@ -109,27 +109,23 @@ class Users extends Authentication
         }
     }
 
-    public function edit_profile($params)
+    public function update_profile($params)
     {
-        $this->check_role('user');
+        $user = $this->check_role();
 
-        $this->check_params($params, ['user_id', 'values']);
-        $user_id = $params['user_id'];
-        $profile_data = $params['values'];
-        $this->check_params($profile_data, ['first_name', 'last_name', 'student_id']);
-        $first_name = $profile_data['first_name'];
-        $last_name = $profile_data['last_name'];
-        $student_id = $profile_data['student_id'];
+        $this->check_params($params, [['birth_date', 'gender']]);
+        $birth_date = $params['birth_date'] ? $this->convert_jalali_to_miladi($params['birth_date']) : null;
+        $gender = $params['gender'] ?? null;
 
         $update_profile = $this->updateData(
-            "UPDATE {$this->table['users']} SET `first_name` = ?, `last_name` = ?, `student_id` = ? WHERE `id` = ?",
-            [$first_name, $last_name, $student_id, $user_id]
+            "UPDATE {$this->table['users']} SET `birth_date` = ?, `gender` = ? WHERE `id` = ?",
+            [$birth_date, $gender, $user['id']]
         );
 
         if ($update_profile) {
-            Response::success('پروفایل با موفقیت ویرایش شد');
+            Response::success('پروفایل بروزرسانی شد');
         }
 
-        Response::error('خطا در آپدیت پروفایل');
+        Response::error('خطا در بروزرسانی پروفایل');
     }
 }

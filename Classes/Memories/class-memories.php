@@ -72,13 +72,15 @@ class Memories extends Users
 
         $memories = $this->getData($sql, isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id], true);
 
-        if ($memories) {
-            foreach ($memories as &$memory) {
-                $memory['event'] = isset($memory['event']) ? json_decode($memory['event']) : null;
-                $memory['user'] = isset($memory['user']) ? json_decode($memory['user']) : null;
-                $memory['medias'] = isset($memory['medias']) ? json_decode($memory['medias']) : null;
-                $memory['hashtags'] = isset($memory['hashtags']) ? json_decode($memory['hashtags']) : null;
-            }
+        if (!$memories) {
+            Response::error('خاطره ای یافت نشد');
+        }
+
+        foreach ($memories as &$memory) {
+            $memory['event'] = isset($memory['event']) ? json_decode($memory['event']) : null;
+            $memory['user'] = isset($memory['user']) ? json_decode($memory['user']) : null;
+            $memory['medias'] = isset($memory['medias']) ? json_decode($memory['medias']) : null;
+            $memory['hashtags'] = isset($memory['hashtags']) ? json_decode($memory['hashtags']) : null;
         }
 
         Response::success('خاطرات دریافت شد', 'allMemories', $memories);
@@ -100,6 +102,10 @@ class Memories extends Users
         ORDER BY pm.id;";
 
         $memory_medias = $this->getData($sql, [$uuid], true);
+
+        if (!$memory_medias) {
+            Response::error('رسانه ای یافت نشد');
+        }
 
         Response::success('رسانه های خاطره دریافت شد', 'memory_medias', $memory_medias);
     }
