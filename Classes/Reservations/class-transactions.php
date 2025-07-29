@@ -38,7 +38,7 @@ class Transactions extends Reservations
         $transactions = $this->getData($sql, [$user['id']], true);
 
         if (!$transactions) {
-            Response::error('تراکنشی یافت نشد');
+            Response::success('تراکنشی یافت نشد');
         }
 
         foreach ($transactions as &$transaction) {

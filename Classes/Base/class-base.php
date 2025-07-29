@@ -234,8 +234,33 @@ trait Base
 
     public function convert_jalali_to_miladi($jalali_date)
     {
-        list($year, $month, $day) = explode('/', $jalali_date);
-        $miladi_date = jalali_to_gregorian($year, $month, $day, '/');
+        if (substr_count($jalali_date, '/') !== 2 && substr_count($jalali_date, '-') !== 2) {
+            Response::error('فرمت تاریخ معتبر نیست');
+        }
+
+        $separator = substr_count($jalali_date, '/') === 2 ? '/' : '-';
+        list($year, $month, $day) = explode($separator, $jalali_date);
+
+        if ($year < 1600) {
+            $miladi_date = jalali_to_gregorian($year, $month, $day, '/');
+            return $miladi_date;
+        }
+
+        return $jalali_date;
+    }
+
+    public function convert_miladi_to_jalali($miladi_date)
+    {
+        if (substr_count($miladi_date, '/') !== 2 && substr_count($miladi_date, '-') !== 2) {
+            Response::error('فرمت تاریخ معتبر نیست');
+        }
+
+        $separator = substr_count($miladi_date, '/') === 2 ? '/' : '-';
+        list($year, $month, $day) = explode($separator, $miladi_date);
+
+        if ($miladi_date > 1600) {
+            $jalali_date = gregorian_to_jalali($year, $month, $day, '/');
+        }
 
         return $miladi_date;
     }

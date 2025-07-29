@@ -123,12 +123,12 @@ class Login extends Users
      */
     public function user_login($params)
     {
-        $this->check_params($params, ['phone', ['code', 'password'], 'remember']);
+        $this->check_params($params, ['phone', ['code', 'password']]);
 
         $phone = $this->check_input($params['phone'], 'phone');
         $password = $params['password'] ?? null;
         $code = $params['code'] ?? null;
-        $remember = $params['remember'];
+        $remember = $params['remember'] ?? false;
 
         $user = $this->get_user_by_phone($phone);
 

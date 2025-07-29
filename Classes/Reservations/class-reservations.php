@@ -40,7 +40,7 @@ class Reservations extends Events
         $reservations_json = $this->getData($sql, [$user['id']], true);
 
         if (!$reservations_json) {
-            Response::error('رزروی یافت نشد');
+            Response::success('رزروی یافت نشد');
         }
 
         $reservations = array_column($reservations_json, 'reservations_data');

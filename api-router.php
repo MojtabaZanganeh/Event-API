@@ -16,12 +16,15 @@ $router->add('/auth/register', 'POST', 'Classes\Users\Login', 'user_register');
 $router->add('/auth/login', 'POST', 'Classes\Users\Login', 'user_login');
 $router->add('/auth/verify-token', 'POST', 'Classes\Users\Login', 'user_validate');
 
-$router->add('/users/update-profile', 'POST', 'Classes\Users\Users', 'update_profile');
+$router->add('/users/get-profile', 'GET', 'Classes\Users\Profile', 'get_profile');
+$router->add('/users/update-profile', 'POST', 'Classes\Users\Profile', 'update_profile');
 
 $router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
 $router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_by_slug');
+$router->add('/events/get-similar', 'POST', 'Classes\Events\Events', 'get_similar_events');
 
 $router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
+$router->add('/leaders/get-profile', 'GET', 'Classes\Leaders\Leaders', 'get_leader_profile_data');
 
 $router->add('/conversations/get-user-conversations', 'GET', 'Classes\Conversations\Conversations', 'get_user_conversations');
 $router->add('/conversations/get-conversation-messages', 'POST', 'Classes\Conversations\Conversations', 'get_conversation_messages');

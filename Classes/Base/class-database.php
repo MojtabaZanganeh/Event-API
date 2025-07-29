@@ -35,6 +35,7 @@ class Database
         'conversation_participants' => 'conversation_participants',
         'events' => 'events',
         'event_categories' => 'event_categories',
+        'event_medias' => 'event_medias',
         'leaders' => 'leaders',
         'leader_followers' => 'leader_followers',
         'messages' => 'messages',

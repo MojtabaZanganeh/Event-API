@@ -28,7 +28,7 @@ class Conversations extends Users
                 END AS `name`,
                 CASE 
                     WHEN c.is_group = TRUE THEN (
-                        SELECT e.image_url FROM events e
+                        SELECT e.thumbnail_url FROM events e
                         WHERE e.id = c.event_id
                     )
                     ELSE (
@@ -61,7 +61,7 @@ class Conversations extends Users
         $conversations = $this->getData($sql, [$user['id'], $user['id'], $user['id']], true);
 
         if (!$conversations) {
-            Response::error('گفتگویی یافت نشد');
+            Response::success('گفتگویی یافت نشد');
         }
 
         foreach ($conversations as &$conversation) {
@@ -85,7 +85,7 @@ class Conversations extends Users
         );
 
         if (!$conversation) {
-            Response::error('چت مورد نظر یافت نشد');
+            Response::success('چت مورد نظر یافت نشد');
         }
 
         $is_group = $conversation['is_group'];

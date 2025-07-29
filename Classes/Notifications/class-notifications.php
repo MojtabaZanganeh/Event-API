@@ -18,7 +18,7 @@ class Notifications extends Users
         $notifications = $this->getData($sql, [$user['id']], true);
 
         if (!$notifications) {
-            Response::error('تراکنشی یافت نشد');
+            Response::success('تراکنشی یافت نشد');
         }
 
         Response::success('اعلان ها دریافت شد', 'userNotifications', $notifications);

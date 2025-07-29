@@ -5,14 +5,12 @@ CREATE TABLE
         username VARCHAR(32) UNIQUE NOT NULL,
         first_name VARCHAR(25) NOT NULL,
         last_name VARCHAR(25) NOT NULL,
-        gender ENUM ('male', 'woman'),
+        gender ENUM ('male', 'female'),
         phone VARCHAR(12) UNIQUE NOT NULL,
         password TEXT NOT NULL,
         national_id VARCHAR(10) UNIQUE,
         birth_date DATE,
         role ENUM ('user', 'leader', 'admin') DEFAULT 'user' NOT NULL,
-        rating_avg INT UNSIGNED DEFAULT '0' NOT NULL,
-        rating_count INT UNSIGNED DEFAULT '0' NOT NULL,
         is_active BOOLEAN DEFAULT TRUE,
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
     ) ENGINE = InnoDB;
@@ -42,18 +40,41 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(150) NOT NULL,
         description TEXT,
-        event_type_id INT UNSIGNED NOT NULL,
+        event_category_id INT UNSIGNED NOT NULL,
         location VARCHAR(255) NOT NULL,
+        address VARCHAR(255) NOT NULL,
         start_time TIMESTAMP NOT NULL,
         end_time TIMESTAMP,
         price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
-        image_url VARCHAR(255) NOT NULL,
+        thumbnail_url VARCHAR(255) NOT NULL,
         is_public BOOLEAN DEFAULT TRUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
         FOREIGN KEY (creator_id) REFERENCES users (id)
+    ) ENGINE = InnoDB;
+
+-- جدول رسانه های رویداد
+CREATE TABLE
+    event_medias (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        event_id INT UNSIGNED NOT NULL,
+        media_type ENUM ('image', 'video') NOT NULL,
+        media_url VARCHAR(255) NOT NULL,
+        thumbnail_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (event_id) REFERENCES events (id)
+    ) ENGINE = InnoDB;
+
+-- لیدرها
+CREATE TABLE
+    leaders (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
+        bio TEXT,
+        categories_id JSON NOT NULL,
+        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     ) ENGINE = InnoDB;
 
 -- رزروها
@@ -94,8 +115,8 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         event_id INT UNSIGNED,
         user_id INT UNSIGNED NOT NULL,
-        subject VARCHAR(50) NOT NULL,s
-        code VARCHAR(10) NOT NULL,
+        subject VARCHAR(50) NOT NULL,
+        s code VARCHAR(10) NOT NULL,
         status ENUM (
             'pending',
             ' answered',
@@ -188,18 +209,6 @@ CREATE TABLE
         FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE FOREIGN KEY (reply_to) REFERENCES messages (id) ON DELETE CASCADE
     ) ENGINE = InnoDB;
 
--- لیدرها
-CREATE TABLE
-    leaders (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        user_id INT UNSIGNED NOT NULL,
-        bio TEXT,
-        categories_id JSON NOT NULL,
-        rating_avg FLOAT DEFAULT 0 NOT NULL,
-        rating_count INT DEFAULT 0 NOT NULL,
-        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL FOREIGN KEY (user_id) REFERENCES users (id)
-    ) ENGINE = InnoDB;
-
 -- دنبال کنندگان لیدرها
 CREATE TABLE
     leader_followers (
@@ -212,14 +221,14 @@ CREATE TABLE
         UNIQUE (leader_id, follower_id)
     ) ENGINE = InnoDB;
 
--- نمره دهی
+-- امتیاز دهی
 CREATE TABLE
     ratings (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         from_user_id INT UNSIGNED NOT NULL,
         to_user_id INT UNSIGNED NOT NULL,
         conversation_id INT UNSIGNED NOT NULL,
-        score INT CHECK (score BETWEEN 1 AND 5),
+        score INT CHECK (score BETWEEN 1 AND 5) NOT NULL,
         comment TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (from_user_id) REFERENCES users (id),

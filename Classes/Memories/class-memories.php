@@ -73,7 +73,7 @@ class Memories extends Users
         $memories = $this->getData($sql, isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id], true);
 
         if (!$memories) {
-            Response::error('خاطره ای یافت نشد');
+            Response::success('خاطره ای یافت نشد');
         }
 
         foreach ($memories as &$memory) {
@@ -104,7 +104,7 @@ class Memories extends Users
         $memory_medias = $this->getData($sql, [$uuid], true);
 
         if (!$memory_medias) {
-            Response::error('رسانه ای یافت نشد');
+            Response::success('رسانه ای یافت نشد');
         }
 
         Response::success('رسانه های خاطره دریافت شد', 'memory_medias', $memory_medias);

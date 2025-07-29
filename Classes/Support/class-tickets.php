@@ -18,7 +18,7 @@ class Tickets extends Users
         $tickets = $this->getData($sql, [$user['id']], true);
 
         if (!$tickets) {
-            Response::error('تیکتی یافت نشد');
+            Response::success('تیکتی یافت نشد');
         }
 
         Response::success('تیکت های پشتیبانی دریافت شد', 'userSupportTickets', $tickets);
