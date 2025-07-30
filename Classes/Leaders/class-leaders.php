@@ -79,7 +79,6 @@ class Leaders extends Users
                     leaders l
                 INNER JOIN users u ON l.user_id = u.id
                 LEFT JOIN (
-                    -- آمار نمره‌دهی برای هر کاربر
                     SELECT 
                         to_user_id,
                         AVG(score) AS average_score,
@@ -90,19 +89,17 @@ class Leaders extends Users
                         to_user_id
                 ) rating_stats ON u.id = rating_stats.to_user_id
                 LEFT JOIN (
-                    -- تعداد رویدادهای برگزار شده توسط لیدر
                     SELECT 
                         creator_id,
                         COUNT(*) AS total_hosted
                     FROM 
                         events
                     WHERE 
-                        start_time < NOW()  -- فقط رویدادهای گذشته
+                        start_time < NOW()
                     GROUP BY 
                         creator_id
                 ) hosted_events ON u.id = hosted_events.creator_id
                 LEFT JOIN (
-                    -- تعداد دنبال‌کنندگان لیدر
                     SELECT 
                         leader_id,
                         COUNT(*) AS followers_count
@@ -112,7 +109,6 @@ class Leaders extends Users
                         leader_id
                 ) followers ON l.id = followers.leader_id
                 LEFT JOIN (
-                    -- درآمد کل لیدر از رویدادها
                     SELECT 
                         e.creator_id,
                         SUM(t.amount) AS total_earnings
@@ -123,12 +119,11 @@ class Leaders extends Users
                     INNER JOIN 
                         events e ON r.event_id = e.id
                     WHERE 
-                        t.status = 'paid'  -- فقط پرداخت‌های موفق
+                        t.status = 'paid'
                     GROUP BY 
                         e.creator_id
                 ) earnings ON u.id = earnings.creator_id
                 LEFT JOIN (
-                    -- گرفتن اسم دسته‌بندی‌ها بر اساس آرایه IDها
                     SELECT 
                         l.id AS leader_id,
                         JSON_ARRAYAGG(ec.name) AS category_names

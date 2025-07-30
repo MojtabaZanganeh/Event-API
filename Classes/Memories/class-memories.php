@@ -109,4 +109,38 @@ class Memories extends Users
 
         Response::success('رسانه های خاطره دریافت شد', 'memory_medias', $memory_medias);
     }
+
+    public function get_stories()
+    {
+        $sql = "SELECT 
+                    p.id, 
+                    p.caption,
+                    p.created_at,
+                    e.category_id,
+                    ec.name AS category,
+                    JSON_OBJECT(
+                        'id', u.id,
+                        'name', CONCAT(u.first_name, ' ', u.last_name),
+                        'avatar', u.avatar
+                    ) AS user
+                FROM {$this->table['posts']} p
+                LEFT JOIN {$this->table['events']} e ON p.event_id = e.id
+                LEFT JOIN {$this->table['event_categories']} ec ON e.category_id = ec.id
+                LEFT JOIN {$this->table['users']} u ON p.user_id = u.id
+                
+                WHERE p.status = 'published'
+                ORDER BY created_at DESC";
+
+        $stories = $this->getData($sql, [], true);
+
+        if (!$stories) {
+            Response::error('خطا در دریافت داستان ها');
+        }
+
+        foreach ($stories as &$story) {
+            $story['user'] = json_decode($story['user']);
+        }
+
+        Response::success('داستان ها با موفقیت دریافت شد', 'allStories', $stories);
+    }
 }

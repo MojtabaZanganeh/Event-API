@@ -20,9 +20,11 @@ $router->add('/auth/reset-password', 'POST', 'Classes\Users\Login', 'reset_passw
 $router->add('/users/get-profile', 'GET', 'Classes\Users\Profile', 'get_profile');
 $router->add('/users/update-profile', 'POST', 'Classes\Users\Profile', 'update_profile');
 
+$router->add('/events/get-categories', 'GET', 'Classes\Events\Categories', 'get_categories');
 $router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
 $router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_by_slug');
 $router->add('/events/get-similar', 'POST', 'Classes\Events\Events', 'get_similar_events');
+$router->add('/events/get-featured', 'GET', 'Classes\Events\Events', 'get_featured_events');
 
 $router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
 $router->add('/leaders/get-profile', 'GET', 'Classes\Leaders\Leaders', 'get_leader_profile_data');
@@ -33,6 +35,7 @@ $router->add('/conversations/send-message-to-conversation', 'POST', 'Classes\Con
 
 $router->add('/memories/get-all', 'POST', 'Classes\Memories\Memories', 'get_memories');
 $router->add('/memories/get-memory-medias', 'POST', 'Classes\Memories\Memories', 'get_memoriy_medias');
+$router->add('/memories/get-stories', 'GET', 'Classes\Memories\Memories', 'get_stories');
 
 $router->add('/reservations/get-user-reservations', 'GET', 'Classes\Reservations\Reservations', 'get_user_reservations');
 
