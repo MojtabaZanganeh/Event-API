@@ -59,6 +59,7 @@ class Leaders extends Users
         foreach ($leaders as &$leader) {
             $leader['categories_id'] = json_decode($leader['categories_id']);
             $leader['categories'] = json_decode($leader['categories']);
+            $leader['rating_avg'] = number_format($leader['rating_avg'], 2);
         }
         Response::success('لیدرها دریافت شد', 'allLeaders', $leaders);
     }
@@ -146,6 +147,8 @@ class Leaders extends Users
         if (!$leader_data) {
             Response::error('اطلاعاتی دریافت نشد');
         }
+
+        $leader_data['rating_avg'] = number_format($leader_data['rating_avg'], 2);
 
         $leader_data['categories'] = $leader_data['categories'] ? json_decode($leader_data['categories']) : [];
         Response::success('اطلاعات پروفایل دریافت شد', 'leaderData', $leader_data);

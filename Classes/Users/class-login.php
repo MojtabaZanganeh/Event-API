@@ -182,4 +182,29 @@ class Login extends Users
         Response::error('نشست معتبر نیست');
 
     }
+
+    public function reset_password($params)
+    {
+        $this->check_params($params, ['phone', 'password']);
+
+        $phone = $this->check_input($params['phone'], 'phone');
+        $password = $this->check_input($params['password'], 'password');
+
+        $verify_phone = $this->verify_phone($phone);
+
+        if (!$verify_phone) {
+            Response::error('شماره موبایل معتبر نیست');
+        }
+
+        $change_password = $this->updateData("UPDATE users SET password = ? WHERE phone = ?", [
+            password_hash($password, PASSWORD_DEFAULT),
+            $phone
+        ]);
+
+        if ($change_password) {
+            Response::success('رمز عبور با موفقیت تغییر یافت');
+        } else {
+            Response::error('کاربری با این شماره موبایل یافت نشد');
+        }
+    }
 }

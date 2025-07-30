@@ -70,8 +70,7 @@ if (!is_null($header) && $header != $_ENV['API_KEY']) {
  * @var string $requestMethod The HTTP method of the request
  * @return void
  */
-$requestUrl = parse_url(htmlspecialchars($_SERVER['REQUEST_URI']), PHP_URL_PATH);
-$requestUrl = str_replace($_ENV['URI_DELETE'], '', $requestUrl);
+$requestUrl = parse_url(htmlspecialchars($_SERVER['PATH_INFO']), PHP_URL_PATH);
 $requestMethod = htmlspecialchars($_SERVER['REQUEST_METHOD']);
 
 $router->match($requestUrl, $requestMethod);

@@ -265,6 +265,36 @@ trait Base
         return $miladi_date;
     }
 
+    public function get_user_ip()
+    {
+        $ip_sources = [
+            'HTTP_CLIENT_IP',
+            'HTTP_X_FORWARDED_FOR',
+            'HTTP_X_FORWARDED',
+            'HTTP_X_CLUSTER_CLIENT_IP',
+            'HTTP_FORWARDED_FOR',
+            'HTTP_FORWARDED',
+            'REMOTE_ADDR'
+        ];
+
+        file_put_contents('Logs/mamad.json', json_encode($_SERVER));
+
+        foreach ($ip_sources as $source) {
+            if (isset($_SERVER[$source])) {
+                $ips = explode(',', $_SERVER[$source]);
+                foreach ($ips as $ip) {
+                    $ip = trim($ip);
+                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                        return $ip;
+                    }
+                }
+            }
+        }
+
+        return $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+    }
+
+
     public function generate_qr_code($file_name, $data)
     {
         try {

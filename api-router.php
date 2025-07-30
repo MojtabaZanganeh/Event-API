@@ -15,6 +15,7 @@ $router->add('/auth/verify-code', 'POST', 'Classes\Users\Authentication', 'verif
 $router->add('/auth/register', 'POST', 'Classes\Users\Login', 'user_register');
 $router->add('/auth/login', 'POST', 'Classes\Users\Login', 'user_login');
 $router->add('/auth/verify-token', 'POST', 'Classes\Users\Login', 'user_validate');
+$router->add('/auth/reset-password', 'POST', 'Classes\Users\Login', 'reset_password');
 
 $router->add('/users/get-profile', 'GET', 'Classes\Users\Profile', 'get_profile');
 $router->add('/users/update-profile', 'POST', 'Classes\Users\Profile', 'update_profile');

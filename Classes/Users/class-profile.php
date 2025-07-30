@@ -56,7 +56,7 @@ class Profile extends Users
             Response::error('اطلاعات دریافت نشد');
         }
 
-        $user['rating_avg'] = $other_data['rating_avg'];
+        $user['rating_avg'] = number_format($other_data['rating_avg'], 2);
         $user['rating_count'] = $other_data['rating_count'];
         $user['events_joined'] = $other_data['events_joined'];
 

@@ -79,12 +79,13 @@ class Authentication extends Database
 
         $this->beginTransaction();
 
-        $sql = "INSERT INTO {$this->table['otps']} (`phone`, `code`, `expires_at`, `page`, `created_at`) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO {$this->table['otps']} (`phone`, `code`, `expires_at`, `page`, `user_ip`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)";
         $execute = [
             $phone,
             $rand_code,
             $expires_at,
             $page,
+            $this->get_user_ip(),
             $now
         ];
 
@@ -123,12 +124,13 @@ class Authentication extends Database
         $phone = $this->check_input($params['phone'], 'phone');
         $receive_code = $params['code'];
         $get_user_data = $params['user'] ?? null;
-        $get_success_response = $params['response'] ?? null;
+        $get_success_response = $params['get_response'] ?? null;
 
-        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND code = ? ORDER BY expires_at DESC LIMIT 1";
+        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND code = ? AND is_used = '0' AND user_ip = ? ORDER BY expires_at DESC LIMIT 1";
         $execute = [
             $phone,
             $receive_code,
+            $this->get_user_ip()
         ];
         $row = $this->getData($sql, $execute);
 
@@ -184,8 +186,8 @@ class Authentication extends Database
             return false;
         }
 
-        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND is_used = '1' ORDER BY expires_at DESC LIMIT 1";
-        $row = $this->getData($sql, [$phone]);
+        $sql = "SELECT * FROM {$this->table['otps']} WHERE phone = ? AND is_used = '1' AND user_ip = ? ORDER BY expires_at DESC LIMIT 1";
+        $row = $this->getData($sql, [$phone, $this->get_user_ip()]);
 
         if ($row) {
             if (time() - $row['expires_at'] < 60) {
