@@ -44,3 +44,4 @@ $router->add('/transactions/get-user-transactions', 'GET', 'Classes\Reservations
 $router->add('/notifications/get-user-notifications', 'GET', 'Classes\Notifications\Notifications', 'get_user_notifications');
 
 $router->add('/support/tickets/get-user-tickets', 'GET', 'Classes\Support\Tickets', 'get_user_tickets');
+$router->add('/support/reports/add-report', 'POST', 'Classes\Support\Reports', 'add_report');

@@ -78,6 +78,15 @@ CREATE TABLE
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     ) ENGINE = InnoDB;
 
+CREATE TABLE
+    leader_categories (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        leader_id UNSIGNED INT NOT NULL,
+        category_id UNSIGNED INT NOT NULL,
+        FOREIGN KEY (leader_id) REFERENCES leaders (id),
+        FOREIGN KEY (category_id) REFERENCES event_categories (id)
+    ) ENGINE = InnoDB;
+
 -- رزروها
 CREATE TABLE
     reservations (
@@ -243,12 +252,20 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         reporter_id INT UNSIGNED NOT NULL,
         reported_user_id INT UNSIGNED,
-        reported_group_id INT UNSIGNED,
+        reported_conversation_id INT UNSIGNED,
+        reported_message_id INT UNSIGNED,
+        reported_event_id INT UNSIGNED,
+        reported_leader_id INT UNSIGNED,
+        reported_memory_id INT UNSIGNED,
         reason TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (reporter_id) REFERENCES users (id),
         FOREIGN KEY (reported_user_id) REFERENCES users (id),
-        FOREIGN KEY (reported_group_id) REFERENCES `groups` (id)
+        FOREIGN KEY (reported_conversation_id) REFERENCES `conversations` (id)
+        FOREIGN KEY (reported_message_id) REFERENCES `messages` (id)
+        FOREIGN KEY (reported_event_id) REFERENCES `events` (id)
+        FOREIGN KEY (reported_leader_id) REFERENCES `leaders` (id)
+        FOREIGN KEY (reported_memory_id) REFERENCES `posts` (id)
     ) ENGINE = InnoDB;
 
 -- جدول پست ها

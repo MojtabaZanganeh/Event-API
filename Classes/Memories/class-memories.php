@@ -19,23 +19,25 @@ class Memories extends Users
         $sql = "SELECT 
             p.id AS id,
             p.uuid AS uuid,
-            JSON_OBJECT(
-                'name', e.title,
-                'slug', e.title,
-                'location', e.location,
-                'start_time', DATE_FORMAT(e.start_time, '%Y/%m/%d %H:%i')
-            ) AS `event`,
-            JSON_OBJECT(
-                'id', u.id,
-                'name', CONCAT(u.first_name, ' ', u.last_name),
-                'avatar', u.avatar
+            CONCAT(
+                '{',
+                '\"name\":\"', IFNULL(e.title,''), '\",',
+                '\"slug\":\"', IFNULL(e.title,''), '\",',
+                '\"location\":\"', IFNULL(e.location,''), '\",',
+                '\"start_time\":\"', IFNULL(DATE_FORMAT(e.start_time, '%Y/%m/%d %H:%i'),''), '\"',
+                '}'
+            ) AS event,
+            CONCAT(
+                '{',
+                '\"id\":\"', u.id, '\",',
+                '\"name\":\"', CONCAT(u.first_name,' ',u.last_name), '\",',
+                '\"avatar\":\"', IFNULL(u.avatar,''), '\"',
+                '}'
             ) AS user,
-            -- (
-            -- SELECT JSON_ARRAYAGG(
-            --         JSON_OBJECT('type', pm.media_type, 'url', pm.media_url)
-            --     )
-            --     FROM {$this->table['post_media']} pm
-            --     WHERE pm.post_id = p.id
+            -- CONCAT(
+            --     '[',
+            --     IFNULL(GROUP_CONCAT(DISTINCT CONCAT('{\"type\":\"', pm.media_type, '\",\"url\":\"', pm.media_url, '\"}') SEPARATOR ','), ''),
+            --     ']'
             -- ) AS medias,
             (
                 SELECT pm.thumbnail_url 
@@ -56,10 +58,10 @@ class Memories extends Users
                 FROM {$this->table['post_comments']} pc 
                 WHERE pc.post_id = p.id
             ) AS comment_count,
-            (
-                SELECT JSON_ARRAYAGG(ph.hashtag)
-                FROM {$this->table['post_hashtags']} ph
-                WHERE ph.post_id = p.id
+            CONCAT(
+                '[',
+                IFNULL(GROUP_CONCAT(DISTINCT CONCAT('\"', ph.hashtag, '\"') SEPARATOR ','), ''),
+                ']'
             ) AS hashtags,
             (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ?) > 0 AS is_liked,
             (SELECT COUNT(*) FROM post_saved ps WHERE ps.post_id = p.id AND ps.user_id = ?) > 0 AS is_saved,
@@ -68,23 +70,30 @@ class Memories extends Users
         FROM {$this->table['posts']} p
         JOIN {$this->table['users']} u ON p.user_id = u.id
         LEFT JOIN {$this->table['events']} e ON p.event_id = e.id
-        WHERE p.status = 'published' $single_mempry";
+        LEFT JOIN {$this->table['post_media']} pm ON pm.post_id = p.id
+        LEFT JOIN {$this->table['post_hashtags']} ph ON ph.post_id = p.id
+        WHERE p.status = 'published' $single_mempry
+        GROUP BY p.id
+        ORDER BY p.created_at DESC";
 
-        $memories = $this->getData($sql, isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id], true);
+        $params_bind = isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id];
+
+        $memories = $this->getData($sql, $params_bind, true);
 
         if (!$memories) {
             Response::success('خاطره ای یافت نشد');
         }
 
         foreach ($memories as &$memory) {
-            $memory['event'] = isset($memory['event']) ? json_decode($memory['event']) : null;
-            $memory['user'] = isset($memory['user']) ? json_decode($memory['user']) : null;
-            $memory['medias'] = isset($memory['medias']) ? json_decode($memory['medias']) : null;
-            $memory['hashtags'] = isset($memory['hashtags']) ? json_decode($memory['hashtags']) : null;
+            $memory['event'] = $memory['event'] ? json_decode($memory['event']) : null;
+            $memory['user'] = $memory['user'] ? json_decode($memory['user']) : null;
+            // $memory['medias'] = $memory['medias'] ? json_decode($memory['medias']) : [];
+            $memory['hashtags'] = $memory['hashtags'] ? json_decode($memory['hashtags']) : [];
         }
 
         Response::success('خاطرات دریافت شد', 'allMemories', $memories);
     }
+
 
     public function get_memoriy_medias($params)
     {

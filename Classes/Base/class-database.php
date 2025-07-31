@@ -37,6 +37,7 @@ class Database
         'event_categories' => 'event_categories',
         'event_medias' => 'event_medias',
         'leaders' => 'leaders',
+        'leader_categories' => 'leader_categories',
         'leader_followers' => 'leader_followers',
         'messages' => 'messages',
         'notifications' => 'notifications',

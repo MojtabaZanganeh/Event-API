@@ -20,4 +20,4 @@
 /tests/coverage/
 /vendor/
 /Import
-/Logs
+/Logs/*
