@@ -159,7 +159,7 @@ class Conversations extends Users
         );
 
         if ($message_id) {
-            Response::success('پیام ارسال شد', 'message', [
+            Response::success('پیام ارسال شد', 'sent_message', [
                 'id' => $message_id,
                 'sender' => $sender['first_name'] . ' ' . $sender['last_name'],
                 'avatar' => $sender['avatar']
