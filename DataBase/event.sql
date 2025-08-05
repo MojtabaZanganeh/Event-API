@@ -44,7 +44,6 @@ CREATE TABLE
         location VARCHAR(100) NOT NULL,
         address VARCHAR(150) NOT NULL,
         coordinates JSON NOT NULL,
-        coordinates_address VARCHAR(150) NOT NULL,
         start_time TIMESTAMP NOT NULL,
         end_time TIMESTAMP,
         price BIGINT UNSIGNED NOT NULL,

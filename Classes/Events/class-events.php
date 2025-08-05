@@ -152,6 +152,7 @@ class Events extends Users
                 e.start_time,
                 e.end_time,
                 e.location,
+                e.address,
                 ec.name AS category,
                 e.thumbnail,
                 e.price,
