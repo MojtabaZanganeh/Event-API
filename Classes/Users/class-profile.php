@@ -30,7 +30,7 @@ class Profile extends Users
                         AVG(score) AS average_score,
                         COUNT(*) AS total_ratings
                     FROM 
-                        ratings
+                        {$this->table['ratings']}
                     GROUP BY 
                         to_user_id
                 ) rating_stats ON u.id = rating_stats.to_user_id
@@ -39,9 +39,9 @@ class Profile extends Users
                         r.user_id,
                         COUNT(*) AS total_past_reservations
                     FROM 
-                        reservations r
+                        {$this->table['reservations']} r
                     INNER JOIN 
-                        events e ON r.event_id = e.id
+                        {$this->table['events']} e ON r.event_id = e.id
                     WHERE 
                         e.start_time < NOW()
                     GROUP BY 

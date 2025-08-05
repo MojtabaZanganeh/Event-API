@@ -28,7 +28,7 @@ class Leaders extends Users
                 ) AS categories
             FROM {$this->table['leaders']} l
             LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
-            LEFT JOIN leader_categories lc ON lc.leader_id = l.id
+            LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
             LEFT JOIN {$this->table['event_categories']} ec ON ec.id = lc.category_id
             LEFT JOIN (
                 SELECT leader_id, COUNT(*) AS event_count
@@ -42,7 +42,7 @@ class Leaders extends Users
             ) f ON l.id = f.leader_id
             LEFT JOIN (
                 SELECT to_user_id, AVG(score) AS average_score, COUNT(*) AS total_ratings
-                FROM ratings
+                FROM {$this->table['ratings']}
                 GROUP BY to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
             GROUP BY l.id, u.id
@@ -77,31 +77,31 @@ class Leaders extends Users
                         GROUP_CONCAT(DISTINCT CONCAT('\"', ec.name, '\"') ORDER BY ec.name SEPARATOR ','),
                         ']'
                     ) AS categories
-                FROM leaders l
-                INNER JOIN users u ON l.user_id = u.id
-                LEFT JOIN leader_categories lc ON lc.leader_id = l.id
-                LEFT JOIN event_categories ec ON ec.id = lc.category_id
+                FROM {$this->table['leaders']} l
+                INNER JOIN {$this->table['users']} u ON l.user_id = u.id
+                LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
+                LEFT JOIN {$this->table['event_categories']} ec ON ec.id = lc.category_id
                 LEFT JOIN (
                     SELECT to_user_id, AVG(score) AS average_score, COUNT(*) AS total_ratings
-                    FROM ratings
+                    FROM {$this->table['ratings']}
                     GROUP BY to_user_id
                 ) rating_stats ON u.id = rating_stats.to_user_id
                 LEFT JOIN (
                     SELECT leader_id, COUNT(*) AS total_hosted
-                    FROM events
+                    FROM {$this->table['events']}
                     WHERE start_time < NOW()
                     GROUP BY leader_id
                 ) hosted_events ON l.id = hosted_events.leader_id
                 LEFT JOIN (
                     SELECT leader_id, COUNT(*) AS followers_count
-                    FROM leader_followers
+                    FROM {$this->table['leader_followers']}
                     GROUP BY leader_id
                 ) followers ON l.id = followers.leader_id
                 LEFT JOIN (
                     SELECT e.creator_id, SUM(t.amount) AS total_earnings
-                    FROM transactions t
-                    INNER JOIN reservations r ON t.reservation_id = r.id
-                    INNER JOIN events e ON r.event_id = e.id
+                    FROM {$this->table['transactions']} t
+                    INNER JOIN {$this->table['reservations']} r ON t.reservation_id = r.id
+                    INNER JOIN {$this->table['events']} e ON r.event_id = e.id
                     WHERE t.status = 'paid'
                     GROUP BY e.creator_id
                 ) earnings ON u.id = earnings.creator_id

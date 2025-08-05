@@ -28,7 +28,7 @@ class Conversations extends Users
                 END AS `name`,
                 CASE 
                     WHEN c.is_group = TRUE THEN (
-                        SELECT e.thumbnail FROM events e
+                        SELECT e.thumbnail FROM {$this->table['events']} e
                         WHERE e.id = c.event_id
                     )
                     ELSE (

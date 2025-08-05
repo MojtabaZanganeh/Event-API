@@ -14,11 +14,11 @@ class Memories extends Users
         $memory_uuid = $params['uuid'] ?? null;
         $user_id = 1;
 
-        $single_mempry = $memory_uuid ? 'AND p.uuid = ?' : '';
+        $single_mempry = $memory_uuid ? 'AND m.uuid = ?' : '';
 
         $sql = "SELECT 
-            p.id AS id,
-            p.uuid AS uuid,
+            m.id AS id,
+            m.uuid AS uuid,
             CONCAT(
                 '{',
                 '\"name\":\"', IFNULL(e.title,''), '\",',
@@ -36,45 +36,39 @@ class Memories extends Users
             ) AS user,
             -- CONCAT(
             --     '[',
-            --     IFNULL(GROUP_CONCAT(DISTINCT CONCAT('{\"type\":\"', pm.media_type, '\",\"url\":\"', pm.media_url, '\"}') SEPARATOR ','), ''),
+            --     IFNULL(GROUP_CONCAT(DISTINCT CONCAT('{\"type\":\"', mm.media_type, '\",\"url\":\"', mm.media_url, '\"}') SEPARATOR ','), ''),
             --     ']'
             -- ) AS medias,
-            (
-                SELECT pm.thumbnail_url 
-                FROM {$this->table['post_media']} pm 
-                WHERE pm.post_id = p.id 
-                ORDER BY pm.id 
-                LIMIT 1
-            ) AS thumbnail_url,
-            p.caption,
-            DATE_FORMAT(p.created_at, '%Y/%m/%d %H:%i') AS created_at,
+            m.caption,
+            mm.media_url as thumbnail,
+            DATE_FORMAT(m.created_at, '%Y/%m/%d %H:%i') AS created_at,
             (
                 SELECT COUNT(*) 
-                FROM {$this->table['post_likes']} pl 
-                WHERE pl.post_id = p.id
+                FROM {$this->table['memory_likes']} ml 
+                WHERE ml.memory_id = m.id
             ) AS like_count,
             (
                 SELECT COUNT(*) 
-                FROM {$this->table['post_comments']} pc 
-                WHERE pc.post_id = p.id
+                FROM {$this->table['memory_comments']} mc 
+                WHERE mc.memory_id = m.id
             ) AS comment_count,
             CONCAT(
                 '[',
-                IFNULL(GROUP_CONCAT(DISTINCT CONCAT('\"', ph.hashtag, '\"') SEPARATOR ','), ''),
+                IFNULL(GROUP_CONCAT(DISTINCT CONCAT('\"', mh.hashtag, '\"') SEPARATOR ','), ''),
                 ']'
             ) AS hashtags,
-            (SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = ?) > 0 AS is_liked,
-            (SELECT COUNT(*) FROM post_saved ps WHERE ps.post_id = p.id AND ps.user_id = ?) > 0 AS is_saved,
-            (SELECT COUNT(*) FROM leader_followers lf WHERE lf.leader_id = u.id AND lf.follower_id = ?) > 0 AS is_following
+            (SELECT COUNT(*) FROM {$this->table['memory_likes']} ml WHERE ml.memory_id = m.id AND ml.user_id = ?) > 0 AS is_liked,
+            (SELECT COUNT(*) FROM {$this->table['memories_saved']} ms WHERE ms.memory_id = m.id AND ms.user_id = ?) > 0 AS is_saved,
+            (SELECT COUNT(*) FROM {$this->table['leader_followers']} lf WHERE lf.leader_id = u.id AND lf.follower_id = ?) > 0 AS is_following
 
-        FROM {$this->table['posts']} p
-        JOIN {$this->table['users']} u ON p.user_id = u.id
-        LEFT JOIN {$this->table['events']} e ON p.event_id = e.id
-        LEFT JOIN {$this->table['post_media']} pm ON pm.post_id = p.id
-        LEFT JOIN {$this->table['post_hashtags']} ph ON ph.post_id = p.id
-        WHERE p.status = 'published' $single_mempry
-        GROUP BY p.id
-        ORDER BY p.created_at DESC";
+        FROM {$this->table['memories']} m
+        JOIN {$this->table['users']} u ON m.user_id = u.id
+        LEFT JOIN {$this->table['events']} e ON m.event_id = e.id
+        LEFT JOIN {$this->table['memory_medias']} mm ON mm.id = m.thumbnail_id
+        LEFT JOIN {$this->table['memory_hashtags']} mh ON mh.memory_id = m.id
+        WHERE m.status = 'published' $single_mempry
+        GROUP BY m.id
+        ORDER BY m.created_at DESC";
 
         $params_bind = isset($params['uuid']) ? [$user_id, $user_id, $user_id, $memory_uuid] : [$user_id, $user_id, $user_id];
 
@@ -89,6 +83,7 @@ class Memories extends Users
             $memory['user'] = $memory['user'] ? json_decode($memory['user']) : null;
             // $memory['medias'] = $memory['medias'] ? json_decode($memory['medias']) : [];
             $memory['hashtags'] = $memory['hashtags'] ? json_decode($memory['hashtags']) : [];
+            $memory['thumbnail'] = $this->get_full_image_url($memory['thumbnail']);
         }
 
         Response::success('خاطرات دریافت شد', 'allMemories', $memories);
@@ -102,15 +97,19 @@ class Memories extends Users
         $uuid = $params['uuid'];
 
         $sql = "SELECT 
-            pm.media_type AS type,
-            pm.media_url AS url
-        FROM {$this->table['posts']} p
-        JOIN {$this->table['post_media']} pm ON p.id = pm.post_id
-        WHERE p.uuid = ?
-            AND p.status = 'published' 
-        ORDER BY pm.id;";
+            mm.media_type AS type,
+            mm.media_url AS url
+        FROM {$this->table['memories']} m
+        JOIN {$this->table['memory_medias']} mm ON m.id = mm.memory_id
+        WHERE m.uuid = ?
+            AND m.status = 'published' 
+        ORDER BY mm.id;";
 
         $memory_medias = $this->getData($sql, [$uuid], true);
+
+        foreach ($memory_medias as &$memory_media) {
+            $memory_media['url'] = $this->get_full_image_url($memory_media['url']);
+        }
 
         if (!$memory_medias) {
             Response::success('رسانه ای یافت نشد');
@@ -122,9 +121,9 @@ class Memories extends Users
     public function get_stories()
     {
         $sql = "SELECT 
-                    p.id, 
-                    p.caption,
-                    p.created_at,
+                    m.id, 
+                    m.caption,
+                    m.created_at,
                     e.category_id,
                     ec.name AS category,
                     JSON_OBJECT(
@@ -132,12 +131,12 @@ class Memories extends Users
                         'name', CONCAT(u.first_name, ' ', u.last_name),
                         'avatar', u.avatar
                     ) AS user
-                FROM {$this->table['posts']} p
-                LEFT JOIN {$this->table['events']} e ON p.event_id = e.id
+                FROM {$this->table['memories']} m
+                LEFT JOIN {$this->table['events']} e ON m.event_id = e.id
                 LEFT JOIN {$this->table['event_categories']} ec ON e.category_id = ec.id
-                LEFT JOIN {$this->table['users']} u ON p.user_id = u.id
+                LEFT JOIN {$this->table['users']} u ON m.user_id = u.id
                 
-                WHERE p.status = 'published'
+                WHERE m.status = 'published'
                 ORDER BY created_at DESC";
 
         $stories = $this->getData($sql, [], true);

@@ -49,12 +49,12 @@ CREATE TABLE
         price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
-        thumbnail INT UNSIGNED NOT NULL,
+        thumbnail_id INT UNSIGNED NOT NULL,
         views INT UNSIGNED NOT NULL,
         is_public BOOLEAN DEFAULT TRUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
-        FOREIGN KEY (thumbnail) REFERENCES event_medias (id)
+        FOREIGN KEY (thumbnail_id) REFERENCES event_medias (id),
         FOREIGN KEY (creator_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
@@ -263,80 +263,79 @@ CREATE TABLE
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (reporter_id) REFERENCES users (id),
         FOREIGN KEY (reported_user_id) REFERENCES users (id),
-        FOREIGN KEY (reported_conversation_id) REFERENCES `conversations` (id)
-        FOREIGN KEY (reported_message_id) REFERENCES `messages` (id)
-        FOREIGN KEY (reported_event_id) REFERENCES `events` (id)
-        FOREIGN KEY (reported_leader_id) REFERENCES `leaders` (id)
-        FOREIGN KEY (reported_memory_id) REFERENCES `posts` (id)
+        FOREIGN KEY (reported_conversation_id) REFERENCES `conversations` (id) FOREIGN KEY (reported_message_id) REFERENCES `messages` (id) FOREIGN KEY (reported_event_id) REFERENCES `events` (id) FOREIGN KEY (reported_leader_id) REFERENCES `leaders` (id) FOREIGN KEY (reported_memory_id) REFERENCES `memories` (id)
     ) ENGINE = InnoDB;
 
 -- جدول پست ها
 CREATE TABLE
-    posts (
+    memories (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        uuid VARCHAR(36) NOT NULL user_id INT UNSIGNED NOT NULL,
-        event_id INT UNSIGNED,
+        uuid VARCHAR(36) NOT NULL,
+        user_id INT UNSIGNED NOT NULL,
+        event_id INT UNSIGNED NOT NULL,
+        thumbnail_id INT UNSIGNED NOT NULL,
         caption TEXT,
         status ENUM ('pending', 'published', 'deleted') DEFAULT 'pending' NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id),
         FOREIGN KEY (event_id) REFERENCES events (id)
+        FOREIGN KEY (thumbnail_id) REFERENCES memory_medias (id)
     ) ENGINE = InnoDB;
 
 -- جدول رسانه های پست
 CREATE TABLE
-    post_media (
+    memory_medias (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        post_id INT UNSIGNED NOT NULL,
+        memory_id INT UNSIGNED NOT NULL,
         media_type ENUM ('image', 'video') NOT NULL,
         media_url VARCHAR(255) NOT NULL,
         thumbnail_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (post_id) REFERENCES posts (id)
+        FOREIGN KEY (memory_id) REFERENCES memories (id)
     ) ENGINE = InnoDB;
 
 -- جدول هشتگ های پست
 CREATE TABLE
-    post_hashtags (
+    memory_hashtags (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        post_id INT UNSIGNED NOT NULL,
+        memory_id INT UNSIGNED NOT NULL,
         hashtag VARCHAR(50) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (post_id) REFERENCES posts (id)
+        FOREIGN KEY (memory_id) REFERENCES memories (id)
     ) ENGINE = InnoDB;
 
 -- جدول لایک های پست
 CREATE TABLE
-    post_likes (
+    memory_likes (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        post_id INT UNSIGNED NOT NULL,
+        memory_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (post_id) REFERENCES posts (id),
+        FOREIGN KEY (memory_id) REFERENCES memories (id),
         FOREIGN KEY (user_id) REFERENCES users (id),
-        UNIQUE (post_id, user_id)
+        UNIQUE (memory_id, user_id)
     ) ENGINE = InnoDB;
 
 -- جدول کامنت های پست
 CREATE TABLE
-    post_comments (
+    memory_comments (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        post_id INT UNSIGNED NOT NULL,
+        memory_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         comment TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (post_id) REFERENCES posts (id),
+        FOREIGN KEY (memory_id) REFERENCES memories (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
 -- جدول ذخیره های پست
 CREATE TABLE
-    post_saved (
+    memories_saved (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        post_id INT UNSIGNED NOT NULL,
+        memory_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (post_id) REFERENCES posts (id),
+        FOREIGN KEY (memory_id) REFERENCES memories (id),
         FOREIGN KEY (user_id) REFERENCES users (id)
     ) ENGINE = InnoDB;

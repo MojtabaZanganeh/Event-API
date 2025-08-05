@@ -50,7 +50,7 @@ class Events extends Users
         LEFT JOIN {$this->table['event_categories']} ec ON e.category_id = ec.id
         LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
         LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
-        LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail = em.id
+        LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail_id = em.id
         LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
         LEFT JOIN (
             SELECT 
@@ -58,7 +58,7 @@ class Events extends Users
                 AVG(score) AS average_score,
                 COUNT(*) AS total_ratings
             FROM 
-                ratings
+                {$this->table['ratings']}
             GROUP BY 
                 to_user_id
         ) rating_stats ON u.id = rating_stats.to_user_id
@@ -109,7 +109,7 @@ class Events extends Users
         }
 
         $sql .= " GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail, e.price,
+                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio, rating_stats.average_score, rating_stats.total_ratings
                 ORDER BY 
@@ -154,7 +154,7 @@ class Events extends Users
                 e.location,
                 e.address,
                 ec.name AS category,
-                e.thumbnail,
+                e.thumbnail_id,
                 e.price,
                 JSON_OBJECT(
                     'total', e.capacity,
@@ -200,13 +200,13 @@ class Events extends Users
                     AVG(score) AS average_score,
                     COUNT(*) AS total_ratings
                 FROM 
-                    ratings
+                    {$this->table['ratings']}
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
             WHERE e.is_public = 1 AND slug = ?
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail, e.price,
+                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio
             ORDER BY e.start_time ASC
@@ -241,11 +241,11 @@ class Events extends Users
             e2.slug,
             e2.title, 
             e2.start_time, 
-            e2.thumbnail
+            e2.thumbnail_id
         FROM 
-            events e1
+            {$this->table['events']} e1
         INNER JOIN 
-            events e2 ON e1.category_id = e2.category_id
+            {$this->table['events']} e2 ON e1.category_id = e2.category_id
         WHERE 
             e1.id = ?
             AND e2.id != ?
@@ -295,7 +295,7 @@ class Events extends Users
                 e.end_time,
                 e.location,
                 ec.name AS category,
-                e.thumbnail,
+                em.media_url as thumbnail,
                 e.price,
                 JSON_OBJECT(
                     'total', e.capacity,
@@ -319,6 +319,7 @@ class Events extends Users
             LEFT JOIN {$this->table['event_categories']} ec ON e.category_id = ec.id
             LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
             LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
+            LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail_id = em.id
             LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
             LEFT JOIN (
                 SELECT 
@@ -326,13 +327,13 @@ class Events extends Users
                     AVG(score) AS average_score,
                     COUNT(*) AS total_ratings
                 FROM 
-                    ratings
+                    {$this->table['ratings']}
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
             WHERE e.is_public = 1
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail, e.price,
+                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio
             ORDER BY e.views DESC, e.start_time ASC
@@ -347,6 +348,7 @@ class Events extends Users
         foreach ($events as &$event) {
             $event['capacity'] = json_decode($event['capacity'], true);
             $event['leader'] = json_decode($event['leader'], true);
+            $event['thumbnail'] = $this->get_full_image_url($event['thumbnail']);
         }
 
         Response::success('رویدادهای ویژه دریافت شد', 'featuredEvents', $events);
