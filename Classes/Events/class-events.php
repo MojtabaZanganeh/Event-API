@@ -26,7 +26,7 @@ class Events extends Users
             e.end_time,
             e.location,
             ec.name AS category,
-            em.media_url as thumbnail,
+            em.url as thumbnail,
             e.price,
             JSON_OBJECT(
                 'total', e.capacity,
@@ -180,7 +180,7 @@ class Events extends Users
                             '[',
                             GROUP_CONCAT(
                                 CONCAT(
-                                    '{\"type\":\"', em.media_type, '\",\"url\":\"', em.media_url, '\"}'
+                                    '{\"type\":\"', em.type, '\",\"url\":\"', em.url, '\"}'
                                 )
                                 SEPARATOR ','
                             ),
@@ -295,7 +295,7 @@ class Events extends Users
                 e.end_time,
                 e.location,
                 ec.name AS category,
-                em.media_url as thumbnail,
+                em.url as thumbnail,
                 e.price,
                 JSON_OBJECT(
                     'total', e.capacity,

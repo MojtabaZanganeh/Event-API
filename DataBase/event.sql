@@ -64,8 +64,8 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         uuid VARCHAR(36) NOT NULL,
         event_id INT UNSIGNED,
-        media_type ENUM ('image', 'video') NOT NULL,
-        media_url VARCHAR(255) NOT NULL,
+        type ENUM ('image', 'video') NOT NULL,
+        url VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_id) REFERENCES events (id)
     ) ENGINE = InnoDB;
@@ -288,8 +288,8 @@ CREATE TABLE
     memory_medias (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         memory_id INT UNSIGNED NOT NULL,
-        media_type ENUM ('image', 'video') NOT NULL,
-        media_url VARCHAR(255) NOT NULL,
+        type ENUM ('image', 'video') NOT NULL,
+        url VARCHAR(100) NOT NULL,
         thumbnail_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (memory_id) REFERENCES memories (id)

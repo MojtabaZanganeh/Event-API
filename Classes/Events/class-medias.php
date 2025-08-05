@@ -30,7 +30,7 @@ class Medias extends Events
         }
 
         $media_id = $this->insertData(
-            "INSERT INTO {$this->table['event_medias']} (uuid, media_type, media_url, uploader_id, created_at) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO {$this->table['event_medias']} (uuid, `type`, `url`, uploader_id, created_at) VALUES (?, ?, ?, ?, ?)",
             [
                 $uuid,
                 $media_type,
@@ -79,7 +79,7 @@ class Medias extends Events
         $uploader = $this->check_role(['leader', 'admin']);
 
         $temp_medias = $this->getData(
-            "SELECT uuid AS id, media_url AS `url`, media_type AS `type` FROM {$this->table['event_medias']} WHERE uploader_id = ? AND event_id IS NULL",
+            "SELECT uuid AS id, `url`, `type` FROM {$this->table['event_medias']} WHERE uploader_id = ? AND event_id IS NULL",
             [$uploader['id']],
             true
         );

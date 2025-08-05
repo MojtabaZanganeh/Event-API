@@ -36,11 +36,11 @@ class Memories extends Users
             ) AS user,
             -- CONCAT(
             --     '[',
-            --     IFNULL(GROUP_CONCAT(DISTINCT CONCAT('{\"type\":\"', mm.media_type, '\",\"url\":\"', mm.media_url, '\"}') SEPARATOR ','), ''),
+            --     IFNULL(GROUP_CONCAT(DISTINCT CONCAT('{\"type\":\"', mm.type, '\",\"url\":\"', mm.url, '\"}') SEPARATOR ','), ''),
             --     ']'
             -- ) AS medias,
             m.caption,
-            mm.media_url as thumbnail,
+            mm.url as thumbnail,
             DATE_FORMAT(m.created_at, '%Y/%m/%d %H:%i') AS created_at,
             (
                 SELECT COUNT(*) 
@@ -97,8 +97,8 @@ class Memories extends Users
         $uuid = $params['uuid'];
 
         $sql = "SELECT 
-            mm.media_type AS type,
-            mm.media_url AS url
+            mm.type,
+            mm.url
         FROM {$this->table['memories']} m
         JOIN {$this->table['memory_medias']} mm ON m.id = mm.memory_id
         WHERE m.uuid = ?
