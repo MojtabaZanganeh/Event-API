@@ -37,25 +37,16 @@ class Login extends Users
     {
         $this->check_params($params, ['first_name', 'last_name', 'phone', 'password', 'code']);
 
-        $first_name = $this->check_input($params['first_name'], 'fa_name');
-        $last_name = $this->check_input($params['last_name'], 'fa_name');
+        $first_name = $this->check_input($params['first_name'], 'fa_name', 'نام');
+        $last_name = $this->check_input($params['last_name'], 'fa_name', 'نام خانوادگی');
 
-        $first_name_length = mb_strlen($first_name, 'UTF-8');
-        $last_name_length = mb_strlen($first_name, 'UTF-8');
-
-        if ($first_name_length < 2 || $first_name_length > 25 || $last_name_length < 2 || $last_name_length > 25) {
-            Response::error('طول نام و نام خانوادگی غیرمجاز است');
-        } elseif (preg_match('/^[\u0600-\u06FF\s]+$/', $first_name) !== true || preg_match('/^[\u0600-\u06FF\s]+$/', $last_name) !== true) {
-            Response::error('نام و نام خانوادگی فقط باید شامل حروف فارسی باشد');
-        }
-
-        $phone = $this->check_input($params['phone'], 'phone');
+        $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
 
         if (mb_strlen($phone, 'UTF-8') !== 11 || preg_match('/^09\d{9}$/', $phone) !== true) {
             Response::error('شماره همراه صحیح نیست');
         }
 
-        $password = $this->check_input($params['password'], 'password');
+        $password = $this->check_input($params['password'], 'password', 'رمز عبور');
 
         if (mb_strlen($password, 'UTF-8') < 8) {
             Response::error('رمز عبور کوتاه است');
@@ -125,7 +116,7 @@ class Login extends Users
     {
         $this->check_params($params, ['phone', ['code', 'password']]);
 
-        $phone = $this->check_input($params['phone'], 'phone');
+        $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
         $password = $params['password'] ?? null;
         $code = $params['code'] ?? null;
         $remember = $params['remember'] ?? false;
@@ -187,8 +178,8 @@ class Login extends Users
     {
         $this->check_params($params, ['phone', 'password']);
 
-        $phone = $this->check_input($params['phone'], 'phone');
-        $password = $this->check_input($params['password'], 'password');
+        $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
+        $password = $this->check_input($params['password'], 'password', 'رمز عبور');
 
         $verify_phone = $this->verify_phone($phone);
 

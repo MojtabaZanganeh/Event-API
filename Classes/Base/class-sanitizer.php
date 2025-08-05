@@ -69,12 +69,16 @@ trait Sanitizer
      * required parameter is missing or empty, it sends an error response with the details.
      *
      * @param array $params The parameters to be checked.
-     * @param array $requiredParams The parameters has be required.
+     * @param array $required_params The parameters has be required.
      * @return void
      */
-    public static function check_params(array $params, array $requiredParams)
+    public static function check_params($params, $required_params)
     {
-        foreach ($requiredParams as $key) {
+        if (!is_array($params) || !is_array($required_params)) {
+            Response::error('خطا در بررسی داده ها');
+        }
+
+        foreach ($required_params as $key) {
             if (is_array($key)) {
                 $found = false;
                 foreach ($key as $option) {
@@ -94,75 +98,110 @@ trait Sanitizer
         }
     }
 
-    public static function check_input($value, $type)
+    public static function check_input($value, $type, $value_name, $regex = null)
     {
-        switch ($type) {
-            case 'phone':
-                if (preg_match('/^\d{11}$/', $value)) {
-                    return $value;
-                }
-                break;
 
-            case 'password':
-                if (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $value)) {
-                    return $value;
-                }
-                break;
+        if (!$type && $regex) {
+            if (preg_match($regex, $value)) {
+                return $value;
+            }
+        } else {
+            switch ($type) {
+                case 'phone':
+                    if (preg_match('/^\d{11}$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'fa_name':
-                if (preg_match('/^[آ-ی\s]+$/u', $value)) {
-                    return $value;
-                }
-                break;
+                case 'password':
+                    if (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'en_name':
-                if (preg_match('/^[a-zA-Z\s]+$/', $value)) {
-                    return $value;
-                }
-                break;
+                case 'fa_name':
+                    if (preg_match('/^[آ-ی\s]{2,25}$/u', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'dormitory':
-                if ($value === 'dormitory-1' || $value === 'dormitory-2') {
-                    return $value;
-                }
-                break;
+                case 'en_name':
+                    if (preg_match('/^[a-zA-Z\s]{2,25}$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'HH:II':
-                if (preg_match('/^(2[0-3]|[01]?[0-9]):[0-5][0-9]$/', $value)) {
-                    return $value;
-                }
-                break;
+                case 'fa_text':
+                    if (preg_match('/^[آ-ی\s]+$/u', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'YYYY/MM/DD':
-                if (preg_match('/^\d{4}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/', $value)) {
-                    return $value;
-                }
-                break;
+                case 'en_text':
+                    if (preg_match('/^[a-zA-Z\s]+$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'int':
-                if (filter_var($value, FILTER_VALIDATE_INT) !== false) {
-                    return (int) $value;
-                }
-                break;
+                case 'HH:II':
+                    if (preg_match('/^(2[0-3]|[01]?[0-9]):[0-5][0-9]$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'float':
-                if (filter_var($value, FILTER_VALIDATE_FLOAT) !== false) {
-                    return (float) $value;
-                }
-                break;
+                case 'YYYY/MM/DD':
+                    if (preg_match('/^\d{4}\/(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])$/', $value)) {
+                        return $value;
+                    }
+                    break;
 
-            case 'email':
-                if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
-                    return $value;
-                }
-                break;
+                case 'int':
+                    if (filter_var($value, FILTER_VALIDATE_INT) !== false) {
+                        return (int) $value;
+                    }
+                    break;
 
-            default:
-                break;
+                case 'non-zero_positive_int':
+                    if (filter_var($value, FILTER_VALIDATE_INT) !== false && $value > 0) {
+                        return (int) $value;
+                    }
+                    break;
+
+                case 'positive_int':
+                    if (filter_var($value, FILTER_VALIDATE_INT) !== false && $value >= 0) {
+                        return (int) $value;
+                    }
+                    break;
+
+                case 'float':
+                    if (filter_var($value, FILTER_VALIDATE_FLOAT) !== false) {
+                        return (float) $value;
+                    }
+                    break;
+
+                case 'email':
+                    if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        return $value;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
         }
 
-        Response::error('مقدار وارد شده معتبر نیست');
+        Response::error("مقدار وارد شده برای $value_name معتبر نیست");
     }
 
+    public static function check_input_length($value, $value_name, $min, $max)
+    {
+        $value_length = mb_strlen($value, 'UTF-8');
+
+        if ($value_length >= $min && $value_length <= $max) {
+            return $value;
+        }
+
+        Response::error("طول $value_name باید بین $min و $max کاراکتر باشد");
+    }
 
 }

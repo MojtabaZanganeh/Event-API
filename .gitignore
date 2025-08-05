@@ -1,6 +1,6 @@
 # Logs
 *.log
-*log.txt
+*files.json
 *mamad.php
 
 # Editor directories and files
@@ -20,4 +20,4 @@
 /tests/coverage/
 /vendor/
 /Import
-/Logs/*
+/Uploads

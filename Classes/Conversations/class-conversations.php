@@ -28,7 +28,7 @@ class Conversations extends Users
                 END AS `name`,
                 CASE 
                     WHEN c.is_group = TRUE THEN (
-                        SELECT e.thumbnail_url FROM events e
+                        SELECT e.thumbnail FROM events e
                         WHERE e.id = c.event_id
                     )
                     ELSE (

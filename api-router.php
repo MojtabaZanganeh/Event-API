@@ -25,6 +25,9 @@ $router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
 $router->add('/events/get-by-slug', 'POST', 'Classes\Events\Events', 'get_event_by_slug');
 $router->add('/events/get-similar', 'POST', 'Classes\Events\Events', 'get_similar_events');
 $router->add('/events/get-featured', 'GET', 'Classes\Events\Events', 'get_featured_events');
+$router->add('/events/create/new-event', 'POST', 'Classes\Events\Events', 'new_event');
+$router->add('/events/create/upload-media', 'POST', 'Classes\Events\Medias', 'upload_media');
+$router->add('/events/create/delete-media', 'POST', 'Classes\Events\Medias', 'delete_media');
 
 $router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
 $router->add('/leaders/get-profile', 'GET', 'Classes\Leaders\Leaders', 'get_leader_profile_data');

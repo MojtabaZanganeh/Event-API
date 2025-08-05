@@ -103,7 +103,7 @@ class Api_Router
                         default => null,
                     } ?: null;
 
-                    $this->callclassFunction($class, $function, $params);
+                    $this->callClassFunction($class, $function, $params);
                     return true;
                 }
 
@@ -124,7 +124,7 @@ class Api_Router
      * @param string $function The method of the class to be called.
      * @param mixed $params The parameters to be passed to the method.
      */
-    private function callclassFunction($class, $function, $params)
+    private function callClassFunction($class, $function, $params)
     {
         $class = $this->sanitizeInput($class);
         $function = $this->sanitizeInput($function);

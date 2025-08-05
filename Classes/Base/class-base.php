@@ -78,7 +78,7 @@ trait Base
 
     public function generate_uuid()
     {
-        $uuid = Uuid::uuid4();
+        $uuid = Uuid::uuid7();
         $uuid = $uuid->toString();
 
         return $uuid ?: null;
@@ -122,6 +122,27 @@ trait Base
         } else {
             return $phone_number;
         }
+    }
+
+    public function handle_file_upload($file, $upload_dir, $uuid = null)
+    {
+        if (!isset($file) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $uuid ??= $this->generate_uuid();
+
+        do {
+            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+            $file_name = $uuid . '.' . $ext;
+            $file_target = $upload_dir . $file_name;
+        } while (file_exists($file_target));
+
+        if (move_uploaded_file($file['tmp_name'], $file_target)) {
+            return $file_target;
+        }
+
+        return null;
     }
 
     /**
@@ -294,6 +315,10 @@ trait Base
         return $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
     }
 
+    public function get_full_image_url($relative_path)
+    {
+        return $_ENV['API_URL'] . $relative_path;
+    }
 
     public function generate_qr_code($file_name, $data)
     {

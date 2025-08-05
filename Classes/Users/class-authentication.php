@@ -37,7 +37,7 @@ class Authentication extends Database
     {
         $this->check_params($params, ['phone']);
 
-        $phone = $this->check_input($params['phone'], 'phone');
+        $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
         $page = $params['page'] ?? 'Login';
         $send_sms = (isset($params['send'])) ? $params['send'] : true;
 
@@ -121,7 +121,7 @@ class Authentication extends Database
     {
         $this->check_params($params, ['phone', 'code']);
 
-        $phone = $this->check_input($params['phone'], 'phone');
+        $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
         $receive_code = $params['code'];
         $get_user_data = $params['user'] ?? null;
         $get_success_response = $params['get_response'] ?? null;

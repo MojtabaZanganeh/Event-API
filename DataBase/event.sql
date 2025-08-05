@@ -50,11 +50,12 @@ CREATE TABLE
         price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
-        thumbnail_url VARCHAR(255) NOT NULL,
+        thumbnail INT UNSIGNED NOT NULL,
         views INT UNSIGNED NOT NULL,
         is_public BOOLEAN DEFAULT TRUE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
+        FOREIGN KEY (thumbnail) REFERENCES event_medias (id)
         FOREIGN KEY (creator_id) REFERENCES users (id)
     ) ENGINE = InnoDB;
 
@@ -62,10 +63,10 @@ CREATE TABLE
 CREATE TABLE
     event_medias (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        event_id INT UNSIGNED NOT NULL,
+        uuid VARCHAR(36) NOT NULL,
+        event_id INT UNSIGNED,
         media_type ENUM ('image', 'video') NOT NULL,
         media_url VARCHAR(255) NOT NULL,
-        thumbnail_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_id) REFERENCES events (id)
     ) ENGINE = InnoDB;
