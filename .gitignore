@@ -21,3 +21,5 @@
 /vendor/
 /Import
 /Uploads
+/Logs/*
+!logs/
