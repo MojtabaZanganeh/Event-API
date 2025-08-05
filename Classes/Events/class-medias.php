@@ -73,4 +73,25 @@ class Medias extends Events
 
         Response::success('تصویر حذف شد');
     }
+
+    public function get_temp_medias()
+    {
+        $uploader = $this->check_role(['leader', 'admin']);
+
+        $temp_medias = $this->getData(
+            "SELECT uuid AS id, media_url AS `url`, media_type AS `type` FROM {$this->table['event_medias']} WHERE uploader_id = ? AND event_id IS NULL",
+            [$uploader['id']],
+            true
+        );
+
+        if (!$temp_medias) {
+            Response::success('تصویر موقتی یافت نشد');
+        }
+
+        foreach ($temp_medias as &$temp_media) {
+            $temp_media['url'] = $this->get_full_image_url($temp_media['url']);
+        }
+
+        Response::success('تصاویر موقت دریافت شد', 'tempMedias', $temp_medias);
+    }
 }

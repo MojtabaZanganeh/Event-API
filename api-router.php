@@ -28,6 +28,7 @@ $router->add('/events/get-featured', 'GET', 'Classes\Events\Events', 'get_featur
 $router->add('/events/create/new-event', 'POST', 'Classes\Events\Events', 'new_event');
 $router->add('/events/create/upload-media', 'POST', 'Classes\Events\Medias', 'upload_media');
 $router->add('/events/create/delete-media', 'POST', 'Classes\Events\Medias', 'delete_media');
+$router->add('/events/create/get-temp-medias', 'GET', 'Classes\Events\Medias', 'get_temp_medias');
 
 $router->add('/leaders/get-all', 'GET', 'Classes\Leaders\Leaders', 'get_leaders');
 $router->add('/leaders/get-profile', 'GET', 'Classes\Leaders\Leaders', 'get_leader_profile_data');
