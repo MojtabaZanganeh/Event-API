@@ -41,21 +41,25 @@ CREATE TABLE
         title VARCHAR(150) NOT NULL,
         description TEXT,
         category_id INT UNSIGNED NOT NULL,
+        start_time TIMESTAMP NOT NULL,
+        end_time TIMESTAMP,
         location VARCHAR(100) NOT NULL,
         address VARCHAR(150) NOT NULL,
         coordinates JSON NOT NULL,
-        start_time TIMESTAMP NOT NULL,
-        end_time TIMESTAMP,
         price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
+        leader_id INT UNSIGNED NOT NULL,
         thumbnail_id INT UNSIGNED NOT NULL,
         views INT UNSIGNED NOT NULL,
-        is_public BOOLEAN DEFAULT TRUE NOT NULL,
+        status ENUM ('pending','verified','deleted','reported') DEFAULT 'pending' NOT NULL,
+        is_private BOOLEAN DEFAULT FALSE NOT NULL,
+        is_approval BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
         FOREIGN KEY (thumbnail_id) REFERENCES event_medias (id),
         FOREIGN KEY (creator_id) REFERENCES users (id)
+        FOREIGN KEY (leader_id) REFERENCES leaders (id)
     ) ENGINE = InnoDB;
 
 -- جدول رسانه های رویداد

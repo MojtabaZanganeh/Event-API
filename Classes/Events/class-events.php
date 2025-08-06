@@ -9,6 +9,14 @@ class Events extends Users
 {
     use Base, Sanitizer;
 
+    private function generate_slug($input)
+    {
+        $output = preg_replace('/[^a-zA-Z0-9\s\-_\x{0600}-\x{06FF}]/u', '', $input);
+        $output = preg_replace('/\s+/', '-', $output);
+        $output = trim($output, '-');
+        return $output;
+    }
+
     public function get_events($params)
     {
         $location = $params['location'] ?? null;
@@ -36,11 +44,6 @@ class Events extends Users
             JSON_OBJECT(
                 'name', CONCAT(u.first_name, ' ', u.last_name),
                 'avatar', u.avatar,
-                'registered_at', u.registered_at
-            ) AS creator,
-            JSON_OBJECT(
-                'name', CONCAT(u.first_name, ' ', u.last_name),
-                'avatar', u.avatar,
                 'bio', l.bio,
                 'rating_avg', COALESCE(rating_stats.average_score, 0),
                 'rating_count', COALESCE(rating_stats.total_ratings, 0),
@@ -62,7 +65,7 @@ class Events extends Users
             GROUP BY 
                 to_user_id
         ) rating_stats ON u.id = rating_stats.to_user_id
-        WHERE e.is_public = 1";
+        WHERE e.status = 'verified' AND e.is_private = 0";
 
         $bindParams = [];
 
@@ -164,11 +167,6 @@ class Events extends Users
                 JSON_OBJECT(
                     'name', CONCAT(u.first_name, ' ', u.last_name),
                     'avatar', u.avatar,
-                    'registered_at', u.registered_at
-                ) AS creator,
-                JSON_OBJECT(
-                    'name', CONCAT(u.first_name, ' ', u.last_name),
-                    'avatar', u.avatar,
                     'bio', l.bio,
                     'rating_avg', COALESCE(rating_stats.average_score, 0),
                     'rating_count', COALESCE(rating_stats.total_ratings, 0),
@@ -204,7 +202,7 @@ class Events extends Users
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
-            WHERE e.is_public = 1 AND slug = ?
+            WHERE e.status = 'verified' AND e.is_private = 0 AND e.slug = ?
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
                 e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
@@ -219,7 +217,6 @@ class Events extends Users
         }
 
         $event['capacity'] = $event['capacity'] ? json_decode($event['capacity'], true) : [];
-        $event['creator'] = $event['creator'] ? json_decode($event['creator'], true) : [];
         $event['leader'] = $event['leader'] ? json_decode($event['leader'], true) : [];
         $event['medias'] = $event['medias'] ? json_decode($event['medias'], true) : [];
 
@@ -305,11 +302,6 @@ class Events extends Users
                 JSON_OBJECT(
                     'name', CONCAT(u.first_name, ' ', u.last_name),
                     'avatar', u.avatar,
-                    'registered_at', u.registered_at
-                ) AS creator,
-                JSON_OBJECT(
-                    'name', CONCAT(u.first_name, ' ', u.last_name),
-                    'avatar', u.avatar,
                     'bio', l.bio,
                     'rating_avg', COALESCE(rating_stats.average_score, 0),
                     'rating_count', COALESCE(rating_stats.total_ratings, 0),
@@ -331,7 +323,7 @@ class Events extends Users
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
-            WHERE e.is_public = 1
+            WHERE e.status = 'verified' AND e.is_private = 0
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
                 e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
@@ -356,6 +348,7 @@ class Events extends Users
 
     public function new_event($params)
     {
+        $creator = $this->check_role(['leader', 'admin']);
         $this->check_params(
             $params,
             [
@@ -372,56 +365,86 @@ class Events extends Users
                 'description',
                 'media_ids',
                 'capacity',
-                'price',
             ]
         );
 
-        $categories_list_array = $this->getData("SELECT `name` FROM {$this->table['event_categories']}", [], true);
-
         $title = $this->check_input_length($params['title'], 'موضوع', 5, 150);
+        $slug = $this->generate_slug($title);
 
-        $category = $params['category'];
-        $categories_list = array_column($categories_list_array, 'name');
-        if (!in_array($category, $categories_list)) {
+        $category_search = $this->getData("SELECT id FROM {$this->table['event_categories']} WHERE `id` = ?", [$params['category']]);
+        if (!$category_search) {
             Response::error('دسته بندی وجود ندارد!');
         }
+        $category_id = $params['category'];
 
         $start_date = $this->check_input($params['start_date'], 'YYYY/MM/DD', 'تاریخ شروع');
-        $start_time = $this->check_input($params['start_time'], 'HH:II', 'ساعت شروع');
-
+        $start_date_miladi = $this->convert_jalali_to_miladi($start_date);
+        $start_time = $this->check_input($params['start_time'], 'HH:MM', 'ساعت شروع');
+        $start_date_time = str_replace('/', '-', "$start_date_miladi $start_time:00");
+        
         $end_date = $this->check_input($params['end_date'], 'YYYY/MM/DD', 'تاریخ پایان');
-        $end_time = $this->check_input($params['end_time'], 'HH:II', 'ساعت پایان');
+        $end_date_miladi = $this->convert_jalali_to_miladi($end_date);
+        $end_time = $this->check_input($params['end_time'], 'HH:MM', 'ساعت پایان');
+        $end_date_time = str_replace('/', '-', "$end_date_miladi $end_time:00");
 
-        $location_name = $this->check_input($params['location_name'], null, 'نام مکان', '/^[آ-ی۰-۹0-9\s]{3,100}$/u');
-        $address = $this->check_input($params['address'], null, 'آدرس دقیق', '/^[آ-ی۰-۹0-9\s]{10,150}$/u');
+        $location_name = $this->check_input($params['location_name'], null, 'نام مکان', '/^[آ-ی۰-۹0-9\s\-_,،\.]{3,100}$/u');
+        $address = $this->check_input($params['address'], null, 'آدرس دقیق', '/^[آ-ی۰-۹0-9\s\-_,،\.]{10,150}$/u');
 
         $coordinate_lat = $this->check_input($params['coordinate_lat'], null, 'عرض جغرافیایی', '/^(\+|-)?(?:90(?:\.0{1,6})?|(?:[0-9]|[1-8][0-9])(?:\.[0-9]{1,6})?)$/');
         $coordinate_lng = $this->check_input($params['coordinate_lng'], null, 'طول جغرافیایی', '/^(\+|-)?(?:90(?:\.0{1,6})?|(?:[0-9]|[1-8][0-9])(?:\.[0-9]{1,6})?)$/');
+        $coordinate_address = $this->check_input($params['coordinate_address'], null, 'آدرس مختصات انتخابی', '/^[آ-ی۰-۹0-9\s\-_,،\.]{10,150}$/u');
+        $coordinates = json_encode(['lat' => $coordinate_lat, 'lng' => $coordinate_lng, 'address' => $coordinate_address]);
 
         $description = $this->check_input_length($params['description'], 'توضیحات', 20, 2000);
-        
-        $capacity = $this->check_input($params['capacity'], 'ظرفیت', 'non-zero_positive_int');
-        $price = $this->check_input($params['price'], 'قیمت', 'positive_int');
 
-        // // Insert the new event into the database
-        // $sql = "INSERT INTO {$this->table['events']} (title, category, start_date, start_time, end_date, end_time, location_name, address, coordinate_lat, coordinate_lng, description, media_ids, capacity, price)
-        //         VALUES (:title, :category, :start_date, :start_time, :end_date, :end_time, :location_name, :address, :coordinate_lat, :coordinate_lng, :description, :media_ids, :capacity, :price)";
-        // $params = [
-        //     'title' => $title,
-        //     'category' => $category,
-        //     'start_date' => $start_date,
-        //     'start_time' => $start_time,
-        //     'end_date' => $end_date,
-        //     'end_time' => $end_time,
-        //     'location_name' => $location_name,
-        //     'address' => $address,
-        //     'coordinate_lat' => $coordinate_lat,
-        //     'coordinate_lng' => $coordinate_lng,
-        //     'description' => $description,
-        //     'media_ids' => json_encode($params['media_ids']),
-        //     'capacity' => $capacity,
-        //     'price' => $price,
-        // ];
-        // $this->execute($sql, $params);
+        $media_ids = explode(',', $params['media_ids']);
+        $thumbnail_id = null;
+        foreach ($media_ids as $media_id) {
+            $media = $this->getData("SELECT id, `type` FROM {$this->table['event_medias']} WHERE uuid = ?", [$media_id]);
+            if ($media['type'] === 'image') {
+                $thumbnail_id = $media['id'];
+                break;
+            }
+        }
+        if (!$thumbnail_id) {
+            Response::error('حداقل یک عکس آپلود کنید');
+        }
+
+        $capacity = $this->check_input($params['capacity'], 'non-zero_positive_int', 'ظرفیت');
+        $price = $params['price'] ? $this->check_input(preg_replace('/\D/', '', $params['price']), 'positive_int', 'قیمت') : 0;
+
+        $is_private = isset($params['private']) ? true : false;
+        $is_approval = isset($params['approval']) ? true : false;
+
+        $leader_search = isset($params['leader']) && $creator['role'] === 'admin' ? $this->getData("SELECT id FROM {$this->table['leaders']} WHERE `id` = ?", [$params['leader']]) : null;
+        $leader_id = isset($leader_search['id']) ? $leader_search['id'] : $this->getData("SELECT id FROM {$this->table['leaders']} WHERE user_id = ?", [$creator['id']])['id'];
+
+        $sql = "INSERT INTO {$this->table['events']} (`title`, `description`, `slug`, `category_id`, `start_time`, `end_time`, `location`, `address`, `coordinates`, `price`, `capacity`, `creator_id`, `leader_id`, `thumbnail_id`, `status`, `is_private`, `is_approval`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $params = [
+            $title,
+            $description,
+            $slug,
+            $category_id,
+            $start_date_time,
+            $end_date_time,
+            $location_name,
+            $address,
+            $coordinates,
+            $price,
+            $capacity,
+            $creator['id'],
+            $leader_id,
+            $thumbnail_id,
+            'pending',
+            $is_private,
+            $is_approval,
+            $this->current_time()
+        ];
+        $event_id = $this->insertData($sql, $params);
+        if (!$event_id) {
+            Response::error('خطا در ثبت رویداد');
+        }
+
+        Response::success('رویداد ثبت شد و پس از بازبینی منتشر خواهد شد');
     }
 }
