@@ -381,7 +381,7 @@ class Events extends Users
         $start_date_miladi = $this->convert_jalali_to_miladi($start_date);
         $start_time = $this->check_input($params['start_time'], 'HH:MM', 'ساعت شروع');
         $start_date_time = str_replace('/', '-', "$start_date_miladi $start_time:00");
-        
+
         $end_date = $this->check_input($params['end_date'], 'YYYY/MM/DD', 'تاریخ پایان');
         $end_date_miladi = $this->convert_jalali_to_miladi($end_date);
         $end_time = $this->check_input($params['end_time'], 'HH:MM', 'ساعت پایان');
@@ -419,6 +419,10 @@ class Events extends Users
         $leader_search = isset($params['leader']) && $creator['role'] === 'admin' ? $this->getData("SELECT id FROM {$this->table['leaders']} WHERE `id` = ?", [$params['leader']]) : null;
         $leader_id = isset($leader_search['id']) ? $leader_search['id'] : $this->getData("SELECT id FROM {$this->table['leaders']} WHERE user_id = ?", [$creator['id']])['id'];
 
+        $status = $creator['role'] === 'admin' ? 'verified' : 'pending';
+
+        $this->beginTransaction();
+
         $sql = "INSERT INTO {$this->table['events']} (`title`, `description`, `slug`, `category_id`, `start_time`, `end_time`, `location`, `address`, `coordinates`, `price`, `capacity`, `creator_id`, `leader_id`, `thumbnail_id`, `status`, `is_private`, `is_approval`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $params = [
             $title,
@@ -435,7 +439,7 @@ class Events extends Users
             $creator['id'],
             $leader_id,
             $thumbnail_id,
-            'pending',
+            $status,
             $is_private,
             $is_approval,
             $this->current_time()
@@ -445,6 +449,17 @@ class Events extends Users
             Response::error('خطا در ثبت رویداد');
         }
 
-        Response::success('رویداد ثبت شد و پس از بازبینی منتشر خواهد شد');
+        $media_sql = "UPDATE {$this->table['event_medias']} SET event_id = $event_id WHERE uuid = ?";
+        $update_media = [];
+        foreach ($media_ids as $media_id) {
+            $update_media[] = $this->updateData($media_sql, [$media_id]);
+        }
+
+        if ($update_media && !in_array(false, $update_media)) {
+            $this->commit();
+            Response::success('رویداد ثبت شد و پس از بازبینی منتشر خواهد شد');
+        }
+
+        Response::error('خطا در ثبت رویداد، دوباره تلاش کنید');
     }
 }
