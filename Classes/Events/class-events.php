@@ -202,7 +202,7 @@ class Events extends Users
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
-            WHERE e.status = 'verified' AND e.is_private = 0 AND e.slug = ?
+            WHERE e.status = 'verified' AND e.slug = ?
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
                 e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
