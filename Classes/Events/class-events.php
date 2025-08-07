@@ -3,6 +3,7 @@ namespace Classes\Events;
 use Classes\Base\Base;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
+use Classes\Leaders\Leaders;
 use Classes\Users\Users;
 
 class Events extends Users
@@ -26,6 +27,8 @@ class Events extends Users
         $grouping = $params['grouping'] ?? null;
         $times = $params['times'] ?? null;
 
+        $status_condition = !$leader ? "e.status = 'verified' AND" : "";
+
         $sql = "SELECT
             e.id,
             e.title,
@@ -38,6 +41,8 @@ class Events extends Users
             em.url as thumbnail,
             e.price,
             e.grouping,
+            e.views,
+            e.status,
             JSON_OBJECT(
                 'total', e.capacity,
                 'filled', COUNT(r.id),
@@ -67,7 +72,7 @@ class Events extends Users
             GROUP BY 
                 to_user_id
         ) rating_stats ON u.id = rating_stats.to_user_id
-        WHERE e.status = 'verified' AND e.is_private = 0";
+        WHERE $status_condition e.is_private = 0";
 
         $bindParams = [];
 
@@ -89,8 +94,11 @@ class Events extends Users
         }
 
         if ($leader) {
-            $sql .= " AND e.leader = ?";
-            $bindParams[] = $leader;
+            $user = $this->check_role(['leader']);
+            $leader_obj = new Leaders();
+            $leader_id = $leader_obj->get_leader_id_by_user_id($user['id']);
+            $sql .= " AND e.leader_id = ?";
+            $bindParams[] = $leader_id;
         }
 
         if ($grouping) {
@@ -124,7 +132,7 @@ class Events extends Users
         }
 
         $sql .= " GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.grouping, e.thumbnail_id, e.price,
+                e.location, ec.name, e.capacity, e.grouping, e.views, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio, rating_stats.average_score, rating_stats.total_ratings
                 ORDER BY 

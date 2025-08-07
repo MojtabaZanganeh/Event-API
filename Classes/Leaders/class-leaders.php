@@ -120,4 +120,10 @@ class Leaders extends Users
 
         Response::success('اطلاعات پروفایل دریافت شد', 'leaderData', $leader_data);
     }
+
+    public function get_leader_id_by_user_id($user_id)
+    {
+        $sql = "SELECT id FROM {$this->table['leaders']} WHERE user_id = ?";
+        return $this->getData($sql, [$user_id])['id'] ?? null;
+    }
 }
