@@ -161,14 +161,8 @@ trait Sanitizer
                     }
                     break;
 
-                case 'non-zero_positive_int':
-                    if (filter_var($value, FILTER_VALIDATE_INT) !== false && $value > 0) {
-                        return (int) $value;
-                    }
-                    break;
-
                 case 'positive_int':
-                    if (filter_var($value, FILTER_VALIDATE_INT) !== false && $value >= 0) {
+                    if (filter_var($value, FILTER_VALIDATE_INT) !== false && $value > 0) {
                         return (int) $value;
                     }
                     break;

@@ -22,7 +22,8 @@ class Events extends Users
         $location = $params['location'] ?? null;
         $date = $params['date'] ?? null;
         $categories = $params['categories'] ?? null;
-        $group = $params['group'] ?? null;
+        $leader = $params['leader'] ?? null;
+        $grouping = $params['grouping'] ?? null;
         $times = $params['times'] ?? null;
 
         $sql = "SELECT
@@ -36,6 +37,7 @@ class Events extends Users
             ec.name AS category,
             em.url as thumbnail,
             e.price,
+            e.grouping,
             JSON_OBJECT(
                 'total', e.capacity,
                 'filled', COUNT(r.id),
@@ -54,7 +56,7 @@ class Events extends Users
         LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
         LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
         LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail_id = em.id
-        LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
+        LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status != 'canceled'
         LEFT JOIN (
             SELECT 
                 to_user_id,
@@ -86,6 +88,16 @@ class Events extends Users
             $bindParams = array_merge($bindParams, $categoryIds);
         }
 
+        if ($leader) {
+            $sql .= " AND e.leader = ?";
+            $bindParams[] = $leader;
+        }
+
+        if ($grouping) {
+            $sql .= $grouping < 20 ? " AND e.grouping = ?" : " AND e.grouping > ?";
+            $bindParams[] = $grouping;
+        }
+
         // if ($group) {
         //     $sql .= " AND e.leader_id = ?";
         //     $bindParams[] = $group;
@@ -112,7 +124,7 @@ class Events extends Users
         }
 
         $sql .= " GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
+                e.location, ec.name, e.capacity, e.grouping, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio, rating_stats.average_score, rating_stats.total_ratings
                 ORDER BY 
@@ -122,8 +134,10 @@ class Events extends Users
                         ELSE 3
                     END,
                     CASE 
-                        WHEN e.start_time > NOW() THEN e.start_time
-                        ELSE e.start_time
+                        WHEN e.start_time > NOW() THEN e.start_time  -- آینده‌ها: صعودی (نزدیک‌ترین اول)
+                    END ASC, 
+                    CASE 
+                        WHEN NOT (e.start_time > NOW()) THEN e.start_time  -- گذشته‌ها/جاری‌ها: نزولی (جدیدترین اول)
                     END DESC";
 
         $events = $this->getData($sql, $bindParams, true);
@@ -156,9 +170,11 @@ class Events extends Users
                 e.end_time,
                 e.location,
                 e.address,
+                e.coordinates,
                 ec.name AS category,
                 e.thumbnail_id,
                 e.price,
+                e.grouping,
                 JSON_OBJECT(
                     'total', e.capacity,
                     'filled', COUNT(r.id),
@@ -191,7 +207,7 @@ class Events extends Users
             LEFT JOIN {$this->table['event_categories']} ec ON e.category_id = ec.id
             LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
             LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
-            LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
+            LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status != 'canceled'
             LEFT JOIN (
                 SELECT 
                     to_user_id,
@@ -204,7 +220,7 @@ class Events extends Users
             ) rating_stats ON u.id = rating_stats.to_user_id
             WHERE e.status = 'verified' AND e.slug = ?
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
+                e.location, ec.name, e.capacity, e.grouping, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio
             ORDER BY e.start_time ASC
@@ -216,6 +232,7 @@ class Events extends Users
             Response::success('رویدادی یافت نشد');
         }
 
+        $event['coordinates'] = $event['coordinates'] ? json_decode($event['coordinates'], true) : [];
         $event['capacity'] = $event['capacity'] ? json_decode($event['capacity'], true) : [];
         $event['leader'] = $event['leader'] ? json_decode($event['leader'], true) : [];
         $event['medias'] = $event['medias'] ? json_decode($event['medias'], true) : [];
@@ -238,44 +255,54 @@ class Events extends Users
             e2.slug,
             e2.title, 
             e2.start_time, 
-            e2.thumbnail_id
+            em.url AS thumbnail
         FROM 
             {$this->table['events']} e1
         INNER JOIN 
             {$this->table['events']} e2 ON e1.category_id = e2.category_id
+        LEFT JOIN
+            {$this->table['event_medias']} em ON em.id = e2.thumbnail_id
         WHERE 
             e1.id = ?
             AND e2.id != ?
+            AND e2.start_time > NOW()
         ORDER BY 
             e2.created_at DESC
         LIMIT 3;";
 
         $similar_events = $this->getData($sql, [$event_id, $event_id], true);
 
-        Response::success('رویدادهای مشابه دریافت شد', 'similarEvents', [
-            [
-                'slug' => 'کارگاه-سفال-گری',
-                'title' => 'کارگاه نقاشی انگشتی',
-                'start_time' => '2025/08/25 15:20',
-                'thumbnail' => '/e1-1.jpeg',
-            ],
-            [
-                'slug' => 'کارگاه-سفال-گری',
-                'title' => 'طبیعت گردی روز جمعه',
-                'start_time' => '2025/08/08 07:50',
+        if (!$similar_events) {
+            $all_events_sql =
+                "SELECT 
+                    e.slug,
+                    e.title, 
+                    e.start_time,
+                    e.price,
+                    ec.name AS category,
+                    em.url AS thumbnail
+                FROM 
+                    {$this->table['events']} e
+                LEFT JOIN
+                    {$this->table['event_categories']} ec ON ec.id = e.category_id
+                LEFT JOIN
+                    {$this->table['event_medias']} em ON em.id = e.thumbnail_id
+                WHERE 
+                    e.id != ?
+                    AND e.start_time > NOW()
+                ORDER BY 
+                    e.created_at DESC
+                LIMIT 3;";
 
-                'thumbnail' => '/e1-2.jpeg',
-            ],
-            [
-                'slug' => 'کارگاه-سفال-گری',
-                'title' => 'کوهنوردی توچال',
-                'start_time' => '2025/08/10 20:00',
-                'thumbnail' => '/e1-3.jpeg',
-            ],
-        ]);
+            $similar_events = $this->getData($all_events_sql, [$event_id], true);
+        }
 
         if (!$similar_events) {
             Response::success('رویداد مشابه یافت نشد');
+        }
+
+        foreach ($similar_events as &$similar_event) {
+            $similar_event['thumbnail'] = $this->get_full_image_url($similar_event['thumbnail']);
         }
 
         Response::success('رویدادهای مشابه دریافت شد', 'similarEvents', $similar_events);
@@ -294,6 +321,7 @@ class Events extends Users
                 ec.name AS category,
                 em.url as thumbnail,
                 e.price,
+                e.grouping,
                 JSON_OBJECT(
                     'total', e.capacity,
                     'filled', COUNT(r.id),
@@ -312,7 +340,7 @@ class Events extends Users
             LEFT JOIN {$this->table['leaders']} l ON e.leader_id = l.id
             LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
             LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail_id = em.id
-            LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status = 'paid'
+            LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status != 'canceled'
             LEFT JOIN (
                 SELECT 
                     to_user_id,
@@ -323,9 +351,9 @@ class Events extends Users
                 GROUP BY 
                     to_user_id
             ) rating_stats ON u.id = rating_stats.to_user_id
-            WHERE e.status = 'verified' AND e.is_private = 0
+            WHERE e.status = 'verified' AND e.is_private = 0 AND e.start_time > NOW()
             GROUP BY e.id, e.title, e.description, e.slug, e.start_time, e.end_time, 
-                e.location, ec.name, e.capacity, e.thumbnail_id, e.price,
+                e.location, ec.name, e.capacity, e.grouping, e.thumbnail_id, e.price,
                 u.first_name, u.last_name, u.avatar, u.registered_at,
                 l.bio
             ORDER BY e.views DESC, e.start_time ASC
@@ -387,6 +415,18 @@ class Events extends Users
         $end_time = $this->check_input($params['end_time'], 'HH:MM', 'ساعت پایان');
         $end_date_time = str_replace('/', '-', "$end_date_miladi $end_time:00");
 
+        $start_datetime = new \DateTime($start_date_time);
+        $end_datetime = new \DateTime($end_date_time);
+        $now = new \DateTime();
+
+        if ($start_datetime < $now) {
+            Response::error('زمان شروع باید در آینده باشد');
+        }
+
+        if ($end_datetime <= $start_datetime) {
+            Response::error('زمان پایان باید بعد از زمان شروع باشد');
+        }
+
         $location_name = $this->check_input($params['location_name'], null, 'نام مکان', '/^[آ-ی۰-۹0-9\s\-_,،\.]{3,100}$/u');
         $address = $this->check_input($params['address'], null, 'آدرس دقیق', '/^[آ-ی۰-۹0-9\s\-_,،\.]{10,150}$/u');
 
@@ -410,7 +450,18 @@ class Events extends Users
             Response::error('حداقل یک عکس آپلود کنید');
         }
 
-        $capacity = $this->check_input($params['capacity'], 'non-zero_positive_int', 'ظرفیت');
+        $capacity = $this->check_input($params['capacity'], 'positive_int', 'ظرفیت');
+        $grouping = $params['grouping'] ? $this->check_input($params['grouping'], 'positive_int', 'گروه بندی') : 0;
+        if ($grouping > 0) {
+            if ($grouping === $capacity) {
+                $grouping = 0;
+            } else if ($grouping > $capacity) {
+                Response::error('گروه‌بندی نمی‌تواند بیشتر از ظرفیت کل باشد');
+            } else if ($capacity % $grouping !== 0) {
+                Response::error("با ظرفیت $capacity نمی‌توان گروه‌های $grouping نفری ایجاد کرد. ظرفیت باید مضربی از گروه‌بندی باشد.");
+            }
+        }
+
         $price = $params['price'] ? $this->check_input(preg_replace('/\D/', '', $params['price']), 'positive_int', 'قیمت') : 0;
 
         $is_private = isset($params['private']) ? true : false;
@@ -423,7 +474,7 @@ class Events extends Users
 
         $this->beginTransaction();
 
-        $sql = "INSERT INTO {$this->table['events']} (`title`, `description`, `slug`, `category_id`, `start_time`, `end_time`, `location`, `address`, `coordinates`, `price`, `capacity`, `creator_id`, `leader_id`, `thumbnail_id`, `status`, `is_private`, `is_approval`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO {$this->table['events']} (`title`, `description`, `slug`, `category_id`, `start_time`, `end_time`, `location`, `address`, `coordinates`, `price`, `capacity`, `grouping`, `creator_id`, `leader_id`, `thumbnail_id`, `status`, `is_private`, `is_approval`, `created_at`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $params = [
             $title,
             $description,
@@ -436,6 +487,7 @@ class Events extends Users
             $coordinates,
             $price,
             $capacity,
+            $grouping,
             $creator['id'],
             $leader_id,
             $thumbnail_id,

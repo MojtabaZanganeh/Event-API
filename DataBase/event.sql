@@ -48,6 +48,7 @@ CREATE TABLE
         coordinates JSON NOT NULL,
         price BIGINT UNSIGNED NOT NULL,
         capacity INT UNSIGNED NOT NULL,
+        grouping INT UNSIGNED DEFAULT 0 NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
         leader_id INT UNSIGNED NOT NULL,
         thumbnail_id INT UNSIGNED NOT NULL,
