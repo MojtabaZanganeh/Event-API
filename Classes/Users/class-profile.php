@@ -67,14 +67,28 @@ class Profile extends Users
     {
         $user = $this->check_role();
 
-        $this->check_params($params, [['birth_date', 'gender']]);
-        $birth_date = $params['birth_date'] ? $this->convert_jalali_to_miladi($params['birth_date']) : null;
-        $gender = $params['gender'] ?? null;
+        $this->check_params($params, ['profileData']);
+        $profile_data = $params['profileData'];
 
         $update_profile = $this->updateData(
             "UPDATE {$this->table['users']} SET `birth_date` = ?, `gender` = ? WHERE `id` = ?",
-            [$birth_date, $gender, $user['id']]
+            [$profile_data['birth_date'], $profile_data['gender'], $user['id']]
         );
+
+        if ($user['role'] === 'leader' && isset($params['leaderData'])) {
+            $leader_data = $params['leaderData'];
+
+            $update_leader_profile = $this->updateData(
+                "UPDATE {$this->table['leaders']} SET `bio` = ?, `categories_id` = ? WHERE `user_id` = ?",
+                [$leader_data['bio'], $leader_data['categories_id'], $user['id']]
+            );
+
+            if ($update_profile && $update_leader_profile) {
+                Response::success('پروفایل بروزرسانی شد');
+            }
+
+            Response::error('خطا در بروزرسانی پروفایل');
+        }
 
         if ($update_profile) {
             Response::success('پروفایل بروزرسانی شد');

@@ -66,7 +66,8 @@ class Leaders extends Users
     {
         $user = $this->check_role(['leader']);
 
-        $sql = "SELECT 
+        $sql = "SELECT
+                    l.bio,
                     COALESCE(rating_stats.average_score, 0) AS rating_avg,
                     COALESCE(rating_stats.total_ratings, 0) AS rating_count,
                     COALESCE(hosted_events.total_hosted, 0) AS events_hosted,
