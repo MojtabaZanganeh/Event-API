@@ -260,7 +260,7 @@ trait Base
         }
 
         $separator = substr_count($jalali_date, '/') === 2 ? '/' : '-';
-        list($year, $month, $day) = explode($separator, $jalali_date);
+        [$year, $month, $day] = explode($separator, $jalali_date);
 
         if ($year < 1600) {
             $miladi_date = jalali_to_gregorian($year, $month, $day, '/');
@@ -277,10 +277,11 @@ trait Base
         }
 
         $separator = substr_count($miladi_date, '/') === 2 ? '/' : '-';
-        list($year, $month, $day) = explode($separator, $miladi_date);
+        [$year, $month, $day] = explode($separator, $miladi_date);
 
-        if ($miladi_date > 1600) {
+        if ($year > 1600) {
             $jalali_date = gregorian_to_jalali($year, $month, $day, '/');
+            return $jalali_date;
         }
 
         return $miladi_date;
@@ -297,8 +298,6 @@ trait Base
             'HTTP_FORWARDED',
             'REMOTE_ADDR'
         ];
-
-        file_put_contents('Logs/mamad.json', json_encode($_SERVER));
 
         foreach ($ip_sources as $source) {
             if (isset($_SERVER[$source])) {

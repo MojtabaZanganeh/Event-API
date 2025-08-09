@@ -108,24 +108,4 @@ class Users extends Authentication
             Response::error('شما دسترسی لازم را ندارید');
         }
     }
-
-    public function update_profile($params)
-    {
-        $user = $this->check_role();
-
-        $this->check_params($params, [['birth_date', 'gender']]);
-        $birth_date = $params['birth_date'] ? $this->convert_jalali_to_miladi($params['birth_date']) : null;
-        $gender = $params['gender'] ?? null;
-
-        $update_profile = $this->updateData(
-            "UPDATE {$this->table['users']} SET `birth_date` = ?, `gender` = ? WHERE `id` = ?",
-            [$birth_date, $gender, $user['id']]
-        );
-
-        if ($update_profile) {
-            Response::success('پروفایل بروزرسانی شد');
-        }
-
-        Response::error('خطا در بروزرسانی پروفایل');
-    }
 }

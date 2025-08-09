@@ -2,6 +2,7 @@
 namespace Classes\Users;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
+use Classes\Leaders\Leaders;
 
 /**
  * Class User
@@ -59,38 +60,36 @@ class Profile extends Users
         $user['rating_avg'] = number_format($other_data['rating_avg'], 2);
         $user['rating_count'] = $other_data['rating_count'];
         $user['events_joined'] = $other_data['events_joined'];
+        $user['birth_date'] = $user['birth_date'] ? $this->convert_miladi_to_jalali($user['birth_date']) : null;
+
+        unset($user['id']);
+        unset($user['password']);
 
         Response::success('اطلاعات پروفایل دریافت شد', 'profileData', $user);
     }
 
-    public function update_profile($params)
+    public function update_user_profile($params)
     {
         $user = $this->check_role();
 
         $this->check_params($params, ['profileData']);
+
         $profile_data = $params['profileData'];
+        $birth_date = $profile_data['birth_date'] ? $this->convert_jalali_to_miladi($profile_data['birth_date']) : null;
+        $gender = $profile_data['gender'] ?? null;
 
         $update_profile = $this->updateData(
             "UPDATE {$this->table['users']} SET `birth_date` = ?, `gender` = ? WHERE `id` = ?",
-            [$profile_data['birth_date'], $profile_data['gender'], $user['id']]
+            [$birth_date, $gender, $user['id']]
         );
 
-        if ($user['role'] === 'leader' && isset($params['leaderData'])) {
-            $leader_data = $params['leaderData'];
+        if ($update_profile) {
 
-            $update_leader_profile = $this->updateData(
-                "UPDATE {$this->table['leaders']} SET `bio` = ?, `categories_id` = ? WHERE `user_id` = ?",
-                [$leader_data['bio'], $leader_data['categories_id'], $user['id']]
-            );
-
-            if ($update_profile && $update_leader_profile) {
-                Response::success('پروفایل بروزرسانی شد');
+            if (isset($params['leaderData']) && $user['role'] === 'leader') {
+                $leader_obj = new Leaders();
+                $leader_obj->update_leader_profile($params['leaderData']);
             }
 
-            Response::error('خطا در بروزرسانی پروفایل');
-        }
-
-        if ($update_profile) {
             Response::success('پروفایل بروزرسانی شد');
         }
 

@@ -10,6 +10,12 @@ class Leaders extends Users
 {
     use Base, Sanitizer;
 
+    public function get_leader_id_by_user_id($user_id)
+    {
+        $sql = "SELECT id FROM {$this->table['leaders']} WHERE user_id = ?";
+        return $this->getData($sql, [$user_id])['id'] ?? null;
+    }
+
     public function get_leaders()
     {
         $sql = "
@@ -122,9 +128,20 @@ class Leaders extends Users
         Response::success('اطلاعات پروفایل دریافت شد', 'leaderData', $leader_data);
     }
 
-    public function get_leader_id_by_user_id($user_id)
+    public function update_leader_profile($leader_data)
     {
-        $sql = "SELECT id FROM {$this->table['leaders']} WHERE user_id = ?";
-        return $this->getData($sql, [$user_id])['id'] ?? null;
+        $user = $this->check_role(['leader']);
+
+        $update_leader_profile = $this->updateData(
+            "UPDATE {$this->table['leaders']} SET `bio` = ?, `categories_id` = ? WHERE `user_id` = ?",
+            [$leader_data['bio'] ?? null, $leader_data['categories_id'] ?? null, $user['id']]
+        );
+
+        if ($update_leader_profile) {
+           return true;
+        }
+
+        Response::error('خطا در بروزرسانی پروفایل');
+
     }
 }

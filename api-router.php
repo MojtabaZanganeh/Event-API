@@ -18,7 +18,7 @@ $router->add('/auth/verify-token', 'POST', 'Classes\Users\Login', 'user_validate
 $router->add('/auth/reset-password', 'POST', 'Classes\Users\Login', 'reset_password');
 
 $router->add('/users/get-profile', 'GET', 'Classes\Users\Profile', 'get_profile');
-$router->add('/users/update-profile', 'POST', 'Classes\Users\Profile', 'update_profile');
+$router->add('/users/update-profile', 'POST', 'Classes\Users\Profile', 'update_user_profile');
 
 $router->add('/events/get-categories', 'GET', 'Classes\Events\Categories', 'get_categories');
 $router->add('/events/get-all', 'GET', 'Classes\Events\Events', 'get_events');
