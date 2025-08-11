@@ -19,4 +19,35 @@ class Categories extends Events
         Response::success('دسته بندی رویدادها دریافت شد', 'allCategories', $categories);
     }
 
+    public function get_categories_by_id(array $categories_id)
+    {
+        if ($categories_id && is_array($categories_id)) {
+
+            $categories_id_string = implode(',', $categories_id);
+
+            $categories_sql = "SELECT
+                    CONCAT(
+                        '[',
+                        IFNULL(
+                            GROUP_CONCAT(
+                                DISTINCT CONCAT('{\"id\":\"', id, '\",\"name\":\"', name, '\"}')
+                                ORDER BY name
+                                SEPARATOR ','
+                            ),
+                            ''
+                        ),
+                        ']'
+                    ) AS categories
+                FROM {$this->table['event_categories']} WHERE FIND_IN_SET(id, ?)
+            ";
+
+            $categories = $this->getData($categories_sql, [$categories_id_string]);
+
+            if ($categories) {
+                return json_decode($categories['categories']);
+            }
+        }
+
+        return [];
+    }
 }

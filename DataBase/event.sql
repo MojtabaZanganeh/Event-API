@@ -85,15 +85,6 @@ CREATE TABLE
         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     ) ENGINE = InnoDB;
 
-CREATE TABLE
-    leader_categories (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-        leader_id UNSIGNED INT NOT NULL,
-        category_id UNSIGNED INT NOT NULL,
-        FOREIGN KEY (leader_id) REFERENCES leaders (id),
-        FOREIGN KEY (category_id) REFERENCES event_categories (id)
-    ) ENGINE = InnoDB;
-
 -- رزروها
 CREATE TABLE
     reservations (

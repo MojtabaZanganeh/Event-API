@@ -2,8 +2,10 @@
 namespace Classes\Leaders;
 
 use Classes\Base\Base;
+use Classes\Base\Error;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
+use Classes\Events\Categories;
 use Classes\Users\Users;
 
 class Leaders extends Users
@@ -18,40 +20,34 @@ class Leaders extends Users
 
     public function get_leaders()
     {
-        $sql = "
-            SELECT
-                l.*,
-                CONCAT(u.first_name, ' ', u.last_name) AS name,
-                u.avatar,
-                COALESCE(e.event_count, 0) AS events_hosted,
-                COALESCE(f.follower_count, 0) AS followers_count,
-                COALESCE(rating_stats.average_score, 0) AS rating_avg,
-                COALESCE(rating_stats.total_ratings, 0) AS rating_count,
-                CONCAT(
-                    '[',
-                    GROUP_CONCAT(DISTINCT CONCAT('\"', ec.name, '\"') ORDER BY ec.name SEPARATOR ','),
-                    ']'
-                ) AS categories
-            FROM {$this->table['leaders']} l
-            LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
-            LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
-            LEFT JOIN {$this->table['event_categories']} ec ON ec.id = lc.category_id
-            LEFT JOIN (
-                SELECT leader_id, COUNT(*) AS event_count
-                FROM {$this->table['events']}
-                GROUP BY leader_id
-            ) e ON l.id = e.leader_id
-            LEFT JOIN (
-                SELECT leader_id, COUNT(*) AS follower_count
-                FROM {$this->table['leader_followers']}
-                GROUP BY leader_id
-            ) f ON l.id = f.leader_id
-            LEFT JOIN (
-                SELECT to_user_id, AVG(score) AS average_score, COUNT(*) AS total_ratings
-                FROM {$this->table['ratings']}
-                GROUP BY to_user_id
-            ) rating_stats ON u.id = rating_stats.to_user_id
-            GROUP BY l.id, u.id
+        $sql = "SELECT
+                    l.*,
+                    CONCAT(u.first_name, ' ', u.last_name) AS name,
+                    u.avatar,
+                    COALESCE(e.event_count, 0) AS events_hosted,
+                    COALESCE(f.follower_count, 0) AS followers_count,
+                    COALESCE(rating_stats.average_score, 0) AS rating_avg,
+                    COALESCE(rating_stats.total_ratings, 0) AS rating_count,
+                    l.categories_id
+                FROM {$this->table['leaders']} l
+                LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
+                LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
+                LEFT JOIN (
+                    SELECT leader_id, COUNT(*) AS event_count
+                    FROM {$this->table['events']}
+                    GROUP BY leader_id
+                ) e ON l.id = e.leader_id
+                LEFT JOIN (
+                    SELECT leader_id, COUNT(*) AS follower_count
+                    FROM {$this->table['leader_followers']}
+                    GROUP BY leader_id
+                ) f ON l.id = f.leader_id
+                LEFT JOIN (
+                    SELECT to_user_id, AVG(score) AS average_score, COUNT(*) AS total_ratings
+                    FROM {$this->table['ratings']}
+                    GROUP BY to_user_id
+                ) rating_stats ON u.id = rating_stats.to_user_id
+                GROUP BY l.id, u.id
         ";
 
         $leaders = $this->getData($sql, [], true);
@@ -61,7 +57,18 @@ class Leaders extends Users
         }
 
         foreach ($leaders as &$leader) {
-            $leader['categories'] = $leader['categories'] ? json_decode($leader['categories']) : [];
+
+            if ($leader['categories_id']) {
+                $categories_id = json_decode($leader['categories_id']);
+
+                $category_obj = new Categories();
+                $categories = $category_obj->get_categories_by_id($categories_id);
+
+                if ($categories) {
+                    $leader['categories'] = $categories ?? null;
+                }
+            }
+
             $leader['rating_avg'] = number_format($leader['rating_avg'], 2);
         }
 
@@ -79,15 +86,9 @@ class Leaders extends Users
                     COALESCE(hosted_events.total_hosted, 0) AS events_hosted,
                     COALESCE(followers.followers_count, 0) AS followers_count,
                     COALESCE(earnings.total_earnings, 0) AS total_earnings,
-                    CONCAT(
-                        '[',
-                        GROUP_CONCAT(DISTINCT CONCAT('\"', ec.name, '\"') ORDER BY ec.name SEPARATOR ','),
-                        ']'
-                    ) AS categories
+                    l.categories_id
                 FROM {$this->table['leaders']} l
                 INNER JOIN {$this->table['users']} u ON l.user_id = u.id
-                LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
-                LEFT JOIN {$this->table['event_categories']} ec ON ec.id = lc.category_id
                 LEFT JOIN (
                     SELECT to_user_id, AVG(score) AS average_score, COUNT(*) AS total_ratings
                     FROM {$this->table['ratings']}
@@ -122,26 +123,36 @@ class Leaders extends Users
             Response::error('اطلاعاتی دریافت نشد');
         }
 
-        $leader_data['categories'] = $leader_data['categories'] ? json_decode($leader_data['categories']) : [];
+        if ($leader_data['categories_id']) {
+            $categories_id = json_decode($leader_data['categories_id']);
+
+            $category_obj = new Categories();
+            $categories = $category_obj->get_categories_by_id($categories_id);
+
+            if ($categories) {
+                $leader_data['categories'] = $categories ?? null;
+            }
+        }
+
         $leader_data['rating_avg'] = number_format($leader_data['rating_avg'], 2);
 
         Response::success('اطلاعات پروفایل دریافت شد', 'leaderData', $leader_data);
     }
-
     public function update_leader_profile($leader_data)
     {
         $user = $this->check_role(['leader']);
 
+        $categories_id = array_column($leader_data['categories'], 'id');
+
         $update_leader_profile = $this->updateData(
             "UPDATE {$this->table['leaders']} SET `bio` = ?, `categories_id` = ? WHERE `user_id` = ?",
-            [$leader_data['bio'] ?? null, $leader_data['categories_id'] ?? null, $user['id']]
+            [$leader_data['bio'] ?? null, json_encode($categories_id) ?? null, $user['id']]
         );
 
-        if ($update_leader_profile) {
-           return true;
+        if (!$update_leader_profile) {
+            Response::error('خطا در بروزرسانی پروفایل');
         }
 
-        Response::error('خطا در بروزرسانی پروفایل');
-
+        return true;
     }
 }

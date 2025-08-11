@@ -52,4 +52,13 @@ class Error
         $this->write_log($exception);
         $this->throw_log($e->getMessage());
     }
+
+    public static function log($file_name, $log, $file_type='json')
+    {
+        if ($file_type === 'json') {
+            file_put_contents("Logs/$file_name.json", json_encode($log, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        } elseif ($file_type === 'txt') {
+            file_put_contents("Logs/$file_name.txt", $log);
+        }
+    }
 }

@@ -37,7 +37,6 @@ class Database
         'event_categories' => 'event_categories',
         'event_medias' => 'event_medias',
         'leaders' => 'leaders',
-        'leader_categories' => 'leader_categories',
         'leader_followers' => 'leader_followers',
         'messages' => 'messages',
         'notifications' => 'notifications',
@@ -152,7 +151,7 @@ class Database
         $stmt->close();
 
         if ($result->num_rows > 0) {
-            return ($fetch_all) ? $result->fetch_all(MYSQLI_ASSOC) : $result->fetch_assoc();
+            return $fetch_all ? $result->fetch_all(MYSQLI_ASSOC) : $result->fetch_assoc();
         }
 
         return null;
@@ -170,7 +169,7 @@ class Database
     public function insertData(string $sql, array $params): int|null
     {
         $stmt = $this->executeStatement($sql, $params);
-        $result = $stmt->affected_rows == 1 ? $this->get_insert_id() : null;
+        $result = $stmt->affected_rows !== -1 ? $this->get_insert_id() : null;
         $stmt->close();
         return $result;
     }
@@ -187,7 +186,7 @@ class Database
     public function updateData(string $sql, array $params): bool
     {
         $stmt = $this->executeStatement($sql, $params);
-        $result = $stmt->affected_rows == 1;
+        $result = $stmt->affected_rows !== -1;
         $stmt->close();
         return $result;
     }
@@ -204,7 +203,7 @@ class Database
     public function deleteData(string $sql, array $params): bool
     {
         $stmt = $this->executeStatement($sql, $params);
-        $result = $stmt->affected_rows == 1 ? true : false;
+        $result = $stmt->affected_rows !== -1;
         $stmt->close();
 
         return $result;
