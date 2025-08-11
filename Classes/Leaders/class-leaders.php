@@ -31,7 +31,6 @@ class Leaders extends Users
                     l.categories_id
                 FROM {$this->table['leaders']} l
                 LEFT JOIN {$this->table['users']} u ON l.user_id = u.id
-                LEFT JOIN {$this->table['leader_categories']} lc ON lc.leader_id = l.id
                 LEFT JOIN (
                     SELECT leader_id, COUNT(*) AS event_count
                     FROM {$this->table['events']}
