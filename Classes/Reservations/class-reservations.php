@@ -4,6 +4,7 @@ use Classes\Base\Base;
 use Classes\Events\Events;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
+use Classes\Base\Error;
 
 class Reservations extends Events
 {
@@ -36,7 +37,7 @@ class Reservations extends Events
             WHERE r.user_id = ?
                 ORDER BY r.created_at DESC
         ";
-        
+
         $reservations_json = $this->getData($sql, [$user['id']], true);
 
         if (!$reservations_json) {
@@ -50,5 +51,18 @@ class Reservations extends Events
         }
 
         Response::success('رزروهای شما دریافت شد', 'allReservations', $reservations);
+    }
+
+    public function add_reservation($params) {
+        $this->check_params($params, ['event_id', 'is_group', 'find_buddy']);
+        
+        if ($params['is_group']) {
+            $this->check_params($params, ['group_members']);
+        }
+
+        $transactions_obj = new Transactions();
+        $payment_url = $transactions_obj->create_payment_link('1', '6');
+
+        Response::success('رزرو انجام شد', 'paymentURL', $payment_url);
     }
 }

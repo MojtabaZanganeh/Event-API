@@ -5,6 +5,7 @@ use Classes\Base\Response;
 use Classes\Base\Sanitizer;
 use Classes\Reservations\Reservations;
 use Classes\Base\Zarinpal;
+use GrahamCampbell\ResultType\Success;
 
 class Transactions extends Reservations
 {
@@ -46,5 +47,25 @@ class Transactions extends Reservations
         }
 
         Response::success('تراکنش های شما دریافت شد', 'userTransactions', $transactions);
+    }
+
+    public function create_payment_link($user_id, $event_id) {
+        return 'http://localhost:3000/events/demo-payment';
+    }
+
+    public function check_payment_status($params) {
+        $this->check_params($params, ['authority']);
+
+        Response::success('پرداخت انجام شد', 'paymentStatus', [
+            'success' => false,
+            'amount' => 150000,
+            'refId' => 456498648158,
+            'event' => [
+                'title' => 'مدرسه گربه ها',
+                'start_time' => '2025/09/01 15:15',
+                'location'=>' میدان اقدسیه- ابتدای بزرگراه ارتش- سه راه ازگل- بلوار شهید مژدی- بلوار محک- موسسه خیریه و بیمارستان فوق تخصصی سرطان کودکان محک',
+                'image' => 'http://localhost:80/EventAPI/Uploads/01987a7a-bdd7-73de-b653-4e6cf073fad2.jpeg'
+            ]
+        ]);
     }
 }
