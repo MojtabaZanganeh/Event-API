@@ -257,4 +257,50 @@ class Authentication extends Database
             Response::error('نشست معتبر نیست');
         }
     }
+
+    /**
+     * CSRF Token Validation
+     * @param string|null $headerToken X-CSRF-Token from Header
+     * @param string|null $bodyToken CSRF-TOKEN from Body
+     * @return bool Token is Valid?
+     */
+    public static function csrf_token_validation($bodyToken = null)
+    {
+        if (empty($headerToken) || empty($bodyToken)) {
+            return false;
+        }
+
+        $headerParts = explode('.', $headerToken);
+        $bodyParts = explode('.', $bodyToken);
+
+        if (count($headerParts) !== 2 || count($bodyParts) !== 2) {
+            return false;
+        }
+
+        [$headerPayload, $headerSignature] = $headerParts;
+        [$bodyPayload, $bodySignature] = $bodyParts;
+
+        if (!hash_equals($headerPayload, $bodyPayload)) {
+            return false;
+        }
+
+        $payloadParts = explode('|', $headerPayload);
+        if (count($payloadParts) !== 2) {
+            return false;
+        }
+
+        [$random, $expiry] = $payloadParts;
+
+        $currentTime = time();
+        if ($expiry < $currentTime) {
+            return false;
+        }
+
+        $expectedSignature = hash_hmac('sha256', $headerPayload, $_ENV['CSRF_SECRET_KEY']);
+
+        $isValidHeader = hash_equals($headerSignature, $expectedSignature);
+        $isValidbody = hash_equals($bodySignature, $expectedSignature);
+
+        return $isValidHeader && $isValidbody;
+    }
 }

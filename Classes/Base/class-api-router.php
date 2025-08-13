@@ -2,6 +2,7 @@
 namespace Classes\Base;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
+use Classes\Base\Authentication;
 
 /**
  * Route Class for managing URL routing and authentication.
@@ -27,7 +28,7 @@ class Api_Router
      *
      * @var bool
      */
-    private $authEnabled = false;
+    private $csrf_check = false;
 
     /**
      * Enable authentication for the route.
@@ -36,9 +37,9 @@ class Api_Router
      *
      * @return $this
      */
-    public function auth()
+    public function csrf()
     {
-        $this->authEnabled = true;
+        $this->csrf_check = true;
         return $this;
     }
 
@@ -65,7 +66,7 @@ class Api_Router
             'method' => $method,
             'class' => $class,
             'function' => $function,
-            'auth' => $this->authEnabled
+            'csrf' => $this->csrf_check
         ];
 
     }
@@ -95,6 +96,12 @@ class Api_Router
                     $class = $route['class'];
                     $function = $route['function'];
                     unset($matches[0]);
+
+                    if ($route['csrf']) {
+                        $body_token = $requestMethod !== 'GET' ? $_POST['CSRF_TOKEN'] ?: json_decode(file_get_contents('php://input'), true)['CSRF_TOKEN'] : null;
+                        $auth_obj = new Authentication();
+                        $auth_obj->csrf_token_validation($body_token);
+                    }
 
                     $params = match ($requestMethod) {
                         'GET' => $_GET,

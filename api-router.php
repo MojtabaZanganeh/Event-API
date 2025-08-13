@@ -42,7 +42,7 @@ $router->add('/memories/get-memory-medias', 'POST', 'Classes\Memories\Memories',
 $router->add('/memories/get-stories', 'GET', 'Classes\Memories\Memories', 'get_stories');
 
 $router->add('/reservations/get-user-reservations', 'GET', 'Classes\Reservations\Reservations', 'get_user_reservations');
-$router->add('/reservations/check-discount-code', 'POST', 'Classes\Reservations\Reservations', 'check_discount_code');
+$router->add('/reservations/check-discount-code', 'POST', 'Classes\Reservations\Discounts', 'check_discount_code');
 $router->add('/reservations/add-reservation', 'POST', 'Classes\Reservations\Reservations', 'add_reservation');
 
 $router->add('/transactions/get-user-transactions', 'GET', 'Classes\Reservations\Transactions', 'get_user_transactions');
