@@ -4,6 +4,7 @@ use Classes\Users\Users;
 use Classes\Base\Base;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
+use DateTime;
 
 class Conversations extends Users
 {
@@ -40,6 +41,7 @@ class Conversations extends Users
                     )
                 END AS avatar,
                 c.is_group,
+                c.expires_on,
                  JSON_OBJECT(
                     'text', m.text,
                     'time', m.created_at
@@ -55,8 +57,13 @@ class Conversations extends Users
                 LIMIT 1
             )
             LEFT JOIN {$this->table['users']} u ON m.sender_id = u.id
-            WHERE cp.user_id = ?
-            ORDER BY m.created_at DESC;";
+            WHERE cp.user_id = ? AND c.status = 'completed'
+            ORDER BY 
+                CASE 
+                    WHEN c.expires_on >= NOW() THEN 0
+                    ELSE 1
+                END ASC,
+            m.created_at DESC;";
 
         $conversations = $this->getData($sql, [$user['id'], $user['id'], $user['id']], true);
 
@@ -95,6 +102,7 @@ class Conversations extends Users
                     JSON_OBJECT(
                         'id', m.id,
                         'conversation_id', m.conversation_id,
+                        'expires_on', c.expires_on,
                         'text', m.text,
                         'time', DATE_FORMAT(m.created_at, '%Y/%m/%d %H:%i'),
                         'is_self', (m.sender_id = ?),
@@ -118,6 +126,7 @@ class Conversations extends Users
                 FROM {$this->table['messages']} m
 
                 LEFT JOIN {$this->table['messages']} r ON m.reply_to = r.id
+                LEFT JOIN {$this->table['conversations']} c ON m.conversation_id = c.id
                 LEFT JOIN {$this->table['users']} ur ON r.sender_id = ur.id
                 LEFT JOIN {$this->table['users']} us ON m.sender_id = us.id
 
@@ -147,23 +156,30 @@ class Conversations extends Users
         $sender = $this->check_role();
         $this->check_params($params, ['conversation_id', 'text']);
 
-        $conversation_id = $params['conversation_id'];
-        $text = $params['text'];
-        $reply_to = $params['reply_to'] ?? null;
-        $sender_id = $sender['id'];
-        $now = $this->current_time();
-
-        $message_id = $this->insertData(
-            "INSERT INTO {$this->table['messages']} (`conversation_id`, `sender_id`, `text`, `reply_to`, `created_at`) VALUES (?, ?, ?, ?, ?)",
-            [$conversation_id, $sender_id, $text, $reply_to, $now]
+        $conversation_expires = $this->getData(
+            "SELECT expires_on FROM {$this->table['conversations']} WHERE id = ?",
+            [$params['conversation_id']]
         );
 
-        if ($message_id) {
-            Response::success('پیام ارسال شد', 'sent_message', [
-                'id' => $message_id,
-                'sender' => $sender['first_name'] . ' ' . $sender['last_name'],
-                'avatar' => $sender['avatar']
-            ]);
+        if ($conversation_expires && $conversation_expires['expires_on'] >= new DateTime()) {
+            $conversation_id = $params['conversation_id'];
+            $text = $params['text'];
+            $reply_to = $params['reply_to'] ?? null;
+            $sender_id = $sender['id'];
+            $now = $this->current_time();
+
+            $message_id = $this->insertData(
+                "INSERT INTO {$this->table['messages']} (`conversation_id`, `sender_id`, `text`, `reply_to`, `created_at`) VALUES (?, ?, ?, ?, ?)",
+                [$conversation_id, $sender_id, $text, $reply_to, $now]
+            );
+
+            if ($message_id) {
+                Response::success('پیام ارسال شد', 'sent_message', [
+                    'id' => $message_id,
+                    'sender' => $sender['first_name'] . ' ' . $sender['last_name'],
+                    'avatar' => $sender['avatar']
+                ]);
+            }
         }
 
         Response::error('خطا در ارسال پیام');

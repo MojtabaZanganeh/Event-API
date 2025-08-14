@@ -135,7 +135,7 @@ CREATE TABLE
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         paid_at TIMESTAMP,
-        FOREIGN KEY (reservation_id) REFERENCES reservations (id),
+        FOREIGN KEY (reservation_id) REFERENCES reservations (id)
     ) ENGINE = InnoDB;
 
 -- کدهای تخفیف

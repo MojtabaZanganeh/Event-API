@@ -1,6 +1,7 @@
 <?php
 namespace Classes\Reservations;
 use Classes\Base\Base;
+use Classes\Base\Database;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
 use Classes\Reservations\Reservations;
@@ -49,22 +50,25 @@ class Transactions extends Reservations
         Response::success('تراکنش های شما دریافت شد', 'userTransactions', $transactions);
     }
 
-    public function add_payment($reservation_id, $user_id, $event_id, $amount)
+    public function add_payment($reservation_id, $user_id, $event_id, $amount, Database $db)
     {
         if (!$reservation_id || !$user_id || !$event_id || !isset($amount)) {
             return null;
         }
 
+        $random_string = $this->get_random('mix', rand(5, 15));
+        $random_string_pad = str_pad($random_string, 35, '0', STR_PAD_LEFT);
+        $authority = $amount > 0 ? "A$random_string_pad" : "F$random_string_pad";
         $current_time = $this->current_time();
 
-        $transaction_id = $this->insertData(
-            "INSERT INTO {$this->table['transactions']} (`reservation_id`, `type`, `amount`, `status`, `authority`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        $transaction_id = $db->insertData(
+            "INSERT INTO {$db->table['transactions']} (`reservation_id`, `type`, `amount`, `status`, `authority`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $reservation_id,
                 'payment',
                 $amount,
                 'pending',
-                'A0000000000000000000000000000wwOGYpd',
+                $authority,
                 $current_time,
                 $current_time
             ]
@@ -74,7 +78,9 @@ class Transactions extends Reservations
             return false;
         }
 
-        return 'http://localhost:3000/events/demo-payment';
+        $payment_url = $amount > 0 ? 'http://localhost:3000/events/demo-payment' : "http://localhost:3000/events/payment-check?Authority=$authority&Status=OK";
+
+        return $payment_url;
     }
 
     public function check_payment_status($params)
@@ -87,6 +93,7 @@ class Transactions extends Reservations
                     t.amount,
                     t.ref_id,
                     t.reservation_id,
+                    t.status,
                     JSON_OBJECT(
                         'title', e.title,
                         'start_time', DATE_FORMAT(e.start_time, '%Y/%m/%d %H:%i'),
@@ -105,6 +112,40 @@ class Transactions extends Reservations
         if (!$payment_data) {
             Response::error('تراکنش یافت نشد, در صورتی که مبلغی از حساب شما کم شده باشد ظرف 72 ساعت آینده به حساب شما باز می گردد');
         }
+
+        if ($payment_data['status'] == 'paid') {
+            Response::error('تراکنش قبلا بررسی شده است، برای دیدن بلیط به پروفایل مراجعه کنید');
+        }
+
+        $ref_id = $this->get_random('int', rand(10, 15), $this->table['transactions'], 'ref_id');
+
+        $db = new Database();
+        $db->beginTransaction();
+
+        $update_payment = $db->updateData(
+            "UPDATE {$db->table['transactions']} SET `status` = ?, `ref_id` = ?, `paid_at` = ? WHERE authority = ?",
+            [
+                'paid',
+                $ref_id,
+                $this->current_time(),
+                $params['authority']
+            ]
+        );
+
+        if (!$update_payment) {
+            Response::error('خطا در ثبت تراکنش، صفحه را رفرش کنید و در صورت بروز مجدد این خطا، با پشتیبانی تماس بگیرید');
+        }
+
+        $update_reservation = $this->reservation_paid($payment_data['reservation_id'], $db);
+
+        if (!$update_reservation) {
+            Response::error('خطا در ثبت رزرو، صفحه را رفرش کنید و در صورت بروز مجدد این خطا، با پشتیبانی تماس بگیرید');
+        }
+
+        $db->commit();
+
+        $payment_data['event'] = json_decode($payment_data['event'], true);
+        $payment_data['event']['image'] = $this->get_full_image_url($payment_data['event']['image']);
 
         Response::success('پرداخت انجام شد', 'paymentStatus', $payment_data);
     }
