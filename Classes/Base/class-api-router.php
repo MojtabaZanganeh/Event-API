@@ -2,7 +2,7 @@
 namespace Classes\Base;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
-use Classes\Base\Authentication;
+use Classes\Users\Authentication;
 
 /**
  * Route Class for managing URL routing and authentication.
@@ -56,7 +56,6 @@ class Api_Router
      */
     public function add($url, $method, $class, $function)
     {
-
         $urlPattern = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_-]*)\}/', function ($matches) {
             return "(?<$matches[1]>[^/]+)";
         }, $url);
@@ -68,7 +67,6 @@ class Api_Router
             'function' => $function,
             'csrf' => $this->csrf_check
         ];
-
     }
 
     /**

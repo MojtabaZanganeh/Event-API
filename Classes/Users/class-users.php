@@ -68,7 +68,7 @@ class Users extends Authentication
     public function check_role($roles = ['user', 'leader', 'admin'], $token = null)
     {
         try {
-            $token = is_null($token) ? getallheaders()['Authorization'] : $token;
+            $token = $token === null ? getallheaders()['Authorization'] ?? null : $token;
             if (!$token) {
                 throw new Exception();
             }

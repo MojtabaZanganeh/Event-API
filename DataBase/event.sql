@@ -47,19 +47,19 @@ CREATE TABLE
         address VARCHAR(150) NOT NULL,
         coordinates JSON NOT NULL,
         price BIGINT UNSIGNED NOT NULL,
-        capacity INT UNSIGNED NOT NULL,
+        capacity SMALLINT UNSIGNED NOT NULL,
         grouping INT UNSIGNED DEFAULT 0 NOT NULL,
         creator_id INT UNSIGNED NOT NULL,
         leader_id INT UNSIGNED NOT NULL,
         thumbnail_id INT UNSIGNED NOT NULL,
         views INT UNSIGNED NOT NULL,
-        status ENUM ('pending','verified','deleted','reported') DEFAULT 'pending' NOT NULL,
+        status ENUM ('pending', 'verified', 'deleted', 'reported') DEFAULT 'pending' NOT NULL,
         is_private BOOLEAN DEFAULT FALSE NOT NULL,
         is_approval BOOLEAN DEFAULT FALSE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_type_id) REFERENCES event_types (id),
         FOREIGN KEY (thumbnail_id) REFERENCES event_medias (id),
-        FOREIGN KEY (creator_id) REFERENCES users (id)
+        FOREIGN KEY (creator_id) REFERENCES users (id),
         FOREIGN KEY (leader_id) REFERENCES leaders (id)
     ) ENGINE = InnoDB;
 
@@ -92,12 +92,33 @@ CREATE TABLE
         event_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
         code VARCHAR(10) NOT NULL,
+        discount_code_id INT,
         price BIGINT NOT NULL,
-        status ENUM ('pending-pay', 'paid', 'canceled') DEFAULT 'pending-pay' NOT NULL,
+        find_buddy BOOLEAN DEFAULT FALSE NOT NULL,
+        status ENUM (
+            'pending-pay',
+            'paid',
+            'waiting-for-buddy',
+            'canceled'
+        ) DEFAULT 'pending-pay' NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_id) REFERENCES events (id),
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (discount_code_id) REFERENCES discount_codes (id)
+    ) ENGINE = InnoDB;
+
+-- اعضای گروه رزرو
+CREATE TABLE
+    reservation_group_members (
+        id INT NOT NULL AUTO_INCREMENT,
+        reservation_id INT NOT NULL,
+        first_name VARCHAR(25) NOT NULL,
+        last_name VARCHAR(25) NOT NULL,
+        birth_date DATE NOT NULL,
+        national_id VARCHAR(10) NOT NULL,
+        registered_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
     ) ENGINE = InnoDB;
 
 -- پرداخت ها
@@ -115,6 +136,27 @@ CREATE TABLE
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         paid_at TIMESTAMP,
         FOREIGN KEY (reservation_id) REFERENCES reservations (id),
+    ) ENGINE = InnoDB;
+
+-- کدهای تخفیف
+CREATE TABLE
+    discount_codes (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(20) NOT NULL,
+        event_id INT DEFAULT NULL,
+        category_id INT DEFAULT NULL,
+        leader_id INT DEFAULT NULL,
+        discount_percent TINYINT UNSIGNED NOT NULL,
+        discount_max INT UNSIGNED NOT NULL,
+        discount_constant INT UNSIGNED NOT NULL,
+        capacity SMALLINT UNSIGNED NOT NULL,
+        creator_id INT NOT NULL,
+        expires_on TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES events (id),
+        FOREIGN KEY (creator_id) REFERENCES users (id),
+        FOREIGN KEY (category_id) REFERENCES event_categories (id),
+        FOREIGN KEY (leader_id) REFERENCES leaders (id)
     ) ENGINE = InnoDB;
 
 -- تیکت های پشتیبانی
@@ -188,6 +230,8 @@ CREATE TABLE
         is_group BOOLEAN DEFAULT FALSE NOT NULL,
         name VARCHAR(255),
         event_id INT UNSIGNED,
+        status ENUM ('pending-user', 'completed', 'reported') DEFAULT 'pending-user' NOT NULL,
+        expires_on TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_id) REFERENCES events (id)
     ) ENGINE = InnoDB;
@@ -275,7 +319,7 @@ CREATE TABLE
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id),
-        FOREIGN KEY (event_id) REFERENCES events (id)
+        FOREIGN KEY (event_id) REFERENCES events (id),
         FOREIGN KEY (thumbnail_id) REFERENCES memory_medias (id)
     ) ENGINE = InnoDB;
 

@@ -10,10 +10,12 @@ class Events extends Users
 {
     use Base, Sanitizer;
 
-    private function generate_slug($input)
+    private function generate_slug($input, $timestamp='')
     {
         $output = preg_replace('/[^a-zA-Z0-9\s\-_\x{0600}-\x{06FF}]/u', '', $input);
+        $output .= jdate(' d F Y', $timestamp, '', '', 'en');
         $output = preg_replace('/\s+/', '-', $output);
+        $output = strtolower($output);
         $output = trim($output, '-');
         return $output;
     }
@@ -45,8 +47,8 @@ class Events extends Users
             e.status,
             JSON_OBJECT(
                 'total', e.capacity,
-                'filled', COUNT(r.id),
-                'left', (e.capacity - COUNT(r.id))
+                'filled', COALESCE(SUM(r.group_members), 0),
+                'left', (e.capacity - COALESCE(SUM(r.group_members), 0))
             ) AS capacity,
             JSON_OBJECT(
                 'name', CONCAT(u.first_name, ' ', u.last_name),
@@ -185,8 +187,8 @@ class Events extends Users
                 e.grouping,
                 JSON_OBJECT(
                     'total', e.capacity,
-                    'filled', COUNT(r.id),
-                    'left', (e.capacity - COUNT(r.id))
+                    'filled', COALESCE(SUM(r.group_members), 0),
+                    'left', (e.capacity - COALESCE(SUM(r.group_members), 0))
                 ) AS capacity,
                 JSON_OBJECT(
                     'name', CONCAT(u.first_name, ' ', u.last_name),
@@ -237,7 +239,7 @@ class Events extends Users
         $event = $this->getData($sql, [$slug]);
 
         if (!$event) {
-            Response::success('رویدادی یافت نشد');
+            Response::error('رویدادی یافت نشد');
         }
 
         $event['coordinates'] = $event['coordinates'] ? json_decode($event['coordinates'], true) : [];
@@ -332,8 +334,8 @@ class Events extends Users
                 e.grouping,
                 JSON_OBJECT(
                     'total', e.capacity,
-                    'filled', COUNT(r.id),
-                    'left', (e.capacity - COUNT(r.id))
+                    'filled', COALESCE(SUM(r.group_members), 0),
+                    'left', (e.capacity - COALESCE(SUM(r.group_members), 0))
                 ) AS capacity,
                 JSON_OBJECT(
                     'name', CONCAT(u.first_name, ' ', u.last_name),
@@ -405,46 +407,45 @@ class Events extends Users
         );
 
         $title = $this->check_input_length($params['title'], 'موضوع', 5, 150);
-        $slug = $this->generate_slug($title);
-
+        
         $category_search = $this->getData("SELECT id FROM {$this->table['event_categories']} WHERE `id` = ?", [$params['category']]);
         if (!$category_search) {
             Response::error('دسته بندی وجود ندارد!');
         }
         $category_id = $params['category'];
-
+        
         $start_date = $this->check_input($params['start_date'], 'YYYY/MM/DD', 'تاریخ شروع');
         $start_date_miladi = $this->convert_jalali_to_miladi($start_date);
         $start_time = $this->check_input($params['start_time'], 'HH:MM', 'ساعت شروع');
         $start_date_time = str_replace('/', '-', "$start_date_miladi $start_time:00");
-
+        
         $end_date = $this->check_input($params['end_date'], 'YYYY/MM/DD', 'تاریخ پایان');
         $end_date_miladi = $this->convert_jalali_to_miladi($end_date);
         $end_time = $this->check_input($params['end_time'], 'HH:MM', 'ساعت پایان');
         $end_date_time = str_replace('/', '-', "$end_date_miladi $end_time:00");
-
+        
         $start_datetime = new \DateTime($start_date_time);
         $end_datetime = new \DateTime($end_date_time);
         $now = new \DateTime();
-
+        
         if ($start_datetime < $now) {
             Response::error('زمان شروع باید در آینده باشد');
         }
-
+        
         if ($end_datetime <= $start_datetime) {
             Response::error('زمان پایان باید بعد از زمان شروع باشد');
         }
 
         $location_name = $this->check_input($params['location_name'], null, 'نام مکان', '/^[آ-ی۰-۹0-9\s\-_,،\.]{3,100}$/u');
         $address = $this->check_input($params['address'], null, 'آدرس دقیق', '/^[آ-ی۰-۹0-9\s\-_,،\.]{10,150}$/u');
-
+        
         $coordinate_lat = $this->check_input($params['coordinate_lat'], null, 'عرض جغرافیایی', '/^(\+|-)?(?:90(?:\.0{1,6})?|(?:[0-9]|[1-8][0-9])(?:\.[0-9]{1,6})?)$/');
         $coordinate_lng = $this->check_input($params['coordinate_lng'], null, 'طول جغرافیایی', '/^(\+|-)?(?:90(?:\.0{1,6})?|(?:[0-9]|[1-8][0-9])(?:\.[0-9]{1,6})?)$/');
         $coordinate_address = $this->check_input($params['coordinate_address'], null, 'آدرس مختصات انتخابی', '/^[آ-ی۰-۹0-9\s\-_,،\.]{10,150}$/u');
         $coordinates = json_encode(['lat' => $coordinate_lat, 'lng' => $coordinate_lng, 'address' => $coordinate_address]);
-
+        
         $description = $this->check_input_length($params['description'], 'توضیحات', 20, 2000);
-
+        
         $media_ids = explode(',', $params['media_ids']);
         $thumbnail_id = null;
         foreach ($media_ids as $media_id) {
@@ -469,16 +470,18 @@ class Events extends Users
                 Response::error("با ظرفیت $capacity نمی‌توان گروه‌های $grouping نفری ایجاد کرد. ظرفیت باید مضربی از گروه‌بندی باشد.");
             }
         }
-
+        
         $price = $params['price'] ? $this->check_input(preg_replace('/\D/', '', $params['price']), 'positive_int', 'قیمت') : 0;
-
+        
         $is_private = isset($params['private']) ? true : false;
         $is_approval = isset($params['approval']) ? true : false;
-
+        
         $leader_search = isset($params['leader']) && $creator['role'] === 'admin' ? $this->getData("SELECT id FROM {$this->table['leaders']} WHERE `id` = ?", [$params['leader']]) : null;
         $leader_id = isset($leader_search['id']) ? $leader_search['id'] : $this->getData("SELECT id FROM {$this->table['leaders']} WHERE user_id = ?", [$creator['id']])['id'];
-
+        
         $status = $creator['role'] === 'admin' ? 'verified' : 'pending';
+        
+        $slug = $this->generate_slug($title, strtotime($start_date_miladi));
 
         $this->beginTransaction();
 

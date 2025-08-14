@@ -45,7 +45,7 @@ trait Base
 
         if ($table_name != null) {
 
-            if (is_null($db)) {
+            if ($db === null) {
                 $db = new Database();
             }
 
@@ -59,10 +59,7 @@ trait Base
                 }
 
                 $sql = "SELECT COUNT(*) as count FROM {$table_name} WHERE $row_name LIKE ?";
-                $stmt = $db->executeStatement($sql, ['%' . $randstring . '%']);
-                $result = $stmt->get_result();
-
-                $count = ($result->num_rows > 0) ? $result->fetch_assoc()['count'] : 0;
+                $count = $db->getData($sql, ['%' . $randstring . '%'])['count'] ?: 0;
 
             } while ($count > 0);
 

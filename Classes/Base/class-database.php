@@ -33,6 +33,7 @@ class Database
     public $table = [
         'conversations' => 'conversations',
         'conversation_participants' => 'conversation_participants',
+        'discount_codes' => 'discount_codes',
         'events' => 'events',
         'event_categories' => 'event_categories',
         'event_medias' => 'event_medias',
@@ -50,6 +51,7 @@ class Database
         'ratings' => 'ratings',
         'reports' => 'reports',
         'reservations' => 'reservations',
+        'reservation_group_members' => 'reservation_group_members',
         'support_tickets' => 'support_tickets',
         'transactions' => 'transactions',
         'users' => 'users',

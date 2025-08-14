@@ -49,23 +49,63 @@ class Transactions extends Reservations
         Response::success('تراکنش های شما دریافت شد', 'userTransactions', $transactions);
     }
 
-    public function create_payment_link($user_id, $event_id) {
+    public function add_payment($reservation_id, $user_id, $event_id, $amount)
+    {
+        if (!$reservation_id || !$user_id || !$event_id || !isset($amount)) {
+            return null;
+        }
+
+        $current_time = $this->current_time();
+
+        $transaction_id = $this->insertData(
+            "INSERT INTO {$this->table['transactions']} (`reservation_id`, `type`, `amount`, `status`, `authority`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                $reservation_id,
+                'payment',
+                $amount,
+                'pending',
+                'A0000000000000000000000000000wwOGYpd',
+                $current_time,
+                $current_time
+            ]
+        );
+
+        if (!$transaction_id) {
+            return false;
+        }
+
         return 'http://localhost:3000/events/demo-payment';
     }
 
-    public function check_payment_status($params) {
+    public function check_payment_status($params)
+    {
         $this->check_params($params, ['authority']);
 
-        Response::success('پرداخت انجام شد', 'paymentStatus', [
-            'success' => false,
-            'amount' => 150000,
-            'refId' => 456498648158,
-            'event' => [
-                'title' => 'مدرسه گربه ها',
-                'start_time' => '2025/09/01 15:15',
-                'location'=>' میدان اقدسیه- ابتدای بزرگراه ارتش- سه راه ازگل- بلوار شهید مژدی- بلوار محک- موسسه خیریه و بیمارستان فوق تخصصی سرطان کودکان محک',
-                'image' => 'http://localhost:80/EventAPI/Uploads/01987a7a-bdd7-73de-b653-4e6cf073fad2.jpeg'
-            ]
-        ]);
+        $payment_data = $this->getData(
+            "SELECT
+                    t.id,
+                    t.amount,
+                    t.ref_id,
+                    t.reservation_id,
+                    JSON_OBJECT(
+                        'title', e.title,
+                        'start_time', DATE_FORMAT(e.start_time, '%Y/%m/%d %H:%i'),
+                        'location', e.location,
+                        'image', em.url
+                    ) AS `event`
+                FROM {$this->table['transactions']} t
+                LEFT JOIN {$this->table['reservations']} r ON t.reservation_id = r.id
+                LEFT JOIN {$this->table['events']} e ON r.event_id = e.id
+                LEFT JOIN {$this->table['event_medias']} em ON e.thumbnail_id = em.id
+                WHERE t.authority = ?
+             ",
+            [$params['authority']]
+        );
+
+        if (!$payment_data) {
+            Response::error('تراکنش یافت نشد, در صورتی که مبلغی از حساب شما کم شده باشد ظرف 72 ساعت آینده به حساب شما باز می گردد');
+        }
+
+        Response::success('پرداخت انجام شد', 'paymentStatus', $payment_data);
     }
 }
