@@ -2,6 +2,7 @@
 namespace Classes\Reservations;
 use Classes\Base\Base;
 use Classes\Base\Database;
+use Classes\Conversations\Conversations;
 use Classes\Events\Events;
 use Classes\Base\Response;
 use Classes\Base\Sanitizer;
@@ -53,8 +54,6 @@ class Reservations extends Events
 
         $this->check_params($params, ['event_id', 'is_group', 'find_buddy']);
 
-        $group_members_count = $params['is_group'] ? count($params['group_members']) + 1 : 1;
-
         $event_id = $params['event_id'];
 
         $event = $this->getData(
@@ -64,7 +63,8 @@ class Reservations extends Events
                     e.capacity,
                     e.price,
                     e.grouping,
-                    COALESCE(SUM(r.group_members), 0) AS filled
+                    COALESCE(SUM(r.group_members), 0) AS filled,
+                    (e.capacity - COALESCE(SUM(r.group_members), 0)) AS `left`
                 FROM {$this->table['events']} e
                 LEFT JOIN {$this->table['reservations']} r ON e.id = r.event_id AND r.status != 'canceled'
                 WHERE e.id = ?
@@ -75,17 +75,21 @@ class Reservations extends Events
             Response::error('رویداد یافت نشد');
         }
 
+        if ($event['left'] <= 0) {
+            Response::error('ظرفیت ثبت نام در رویداد تکمیل شده است');
+        }
+
+        $group_members_count = $params['is_group'] ? count($params['group_members']) + 1 : 1;
+
+        if ($group_members_count > $event['left'] || ($event['grouping'] > 2 && $group_members_count > $event['grouping'])) {
+            Response::error('تعداد اعضای گروه از حد مجاز بالاتر است');
+        }
+
         $event_start_time = $event['start_time'];
         $current_datetime = new DateTime();
         $event_start_datetime = new DateTime($event_start_time);
         if ($current_datetime > $event_start_datetime) {
             Response::error('زمان ثبت نام در رویداد گذشته است');
-        }
-
-        $event_capacity = $event['capacity'];
-        $event_filled = $event['filled'];
-        if ($event_filled >= $event_capacity) {
-            Response::error('ظرفیت ثبت نام در رویداد تکمیل شده است');
         }
 
         $reservation_code = 'RES_';
@@ -96,7 +100,7 @@ class Reservations extends Events
         $discount = !empty($params['discount_code']) ? $discount_obj->check_discount_code(['discount_code' => $params['discount_code'], 'event_id' => $event_id, 'return' => true]) : ['id' => 0, 'amount' => 0];
         $final_price = max(0, $event_price - $discount['amount']);
 
-        $find_buddy = $params['find_buddy'] && $event['grouping'] === 0 ? true : false;
+        $find_buddy = $params['find_buddy'] && $event['grouping'] < 2 ? true : false;
 
         $current_time = $this->current_time();
 
@@ -179,8 +183,12 @@ class Reservations extends Events
                     r.event_id,
                     r.user_id,
                     r.find_buddy,
+                    r.group_members,
                     e.start_time AS event_start_time,
-                    e.end_time AS event_end_time
+                    e.end_time AS event_end_time,
+                    e.grouping,
+                    e.title,
+                    e.is_approval
                 FROM {$db->table['reservations']} r
                 LEFT JOIN {$db->table['events']} e ON r.event_id = e.id
                 WHERE r.id = ?
@@ -192,63 +200,53 @@ class Reservations extends Events
             return false;
         }
 
+        $event_id = $reservation_data['event_id'];
+        $user_id = $reservation_data['user_id'];
+        $event_grouping = $reservation_data['grouping'];
+        $event_title = $reservation_data['title'];
+        $event_approval_user = $reservation_data['is_approval'];
+        $group_members = $reservation_data['group_members'];
+
+        $calculation_expires_date = new DateTime($reservation_data['event_end_time'] ?? $reservation_data['event_start_time']);
+        $calculation_expires_date->modify('+1 week');
+        $conversation_expires_date = $calculation_expires_date->format('Y-m-d H:i:s');
+
         $current_time = $this->current_time();
 
+        $conversations_obj = new Conversations();
+
         if ($reservation_data['find_buddy']) {
-            $buddy_conversation = $db->getData("SELECT id FROM {$db->table['conversations']} WHERE `event_id` = ? AND `is_group` = 0 AND `status` = 'pending-user'", [$reservation_data['event_id']]);
+            $buddy_conversation = $db->getData(
+                "SELECT id FROM {$db->table['conversations']} WHERE `event_id` = ? AND `is_group` = 0 AND `status` = 'pending'",
+                [$event_id]
+            );
 
             if ($buddy_conversation) {
-                $add_to_conversation = $db->insertData(
-                    "INSERT INTO {$db->table['conversation_participants']} (`conversation_id`, `user_id`, `joined_at`) VALUES (?, ?, ?)",
-                    [
-                        $buddy_conversation['id'],
-                        $reservation_data['user_id'],
-                        $current_time
-                    ]
-                );
+
+                $buddy_conversation_id = $buddy_conversation['id'];
+
+                $add_to_conversation = $conversations_obj->add_user_to_conversation($db, $buddy_conversation_id, $user_id, $reservation_id, 1);
 
                 if (!$add_to_conversation) {
                     return false;
                 }
 
-                $update_conversation = $db->updateData(
-                    "UPDATE {$db->table['conversations']} SET `status` = 'completed' WHERE id = ?",
-                    [
-                        $buddy_conversation['id']
-                    ]
-                );
-
-                if (!$update_conversation) {
-                    return false;
-                }
-
             } else {
-                $conversation_expires_date = new DateTime($reservation_data['event_end_time'] ?? $reservation_data['event_start_time']);
-                $conversation_expires_date->modify('+1 week');
-
-                $conversation_id = $db->insertData(
-                    "INSERT INTO {$db->table['conversations']} (`is_group`, `event_id`, `status`, `expires_on`, `created_at`) VALUES (?, ?, ?, ?, ?)",
-                    [
-                        false,
-                        $reservation_data['event_id'],
-                        'pending-user',
-                        $conversation_expires_date,
-                        $current_time
-                    ]
+                $conversation_id = $conversations_obj->create_conversation(
+                    null,
+                    false,
+                    $event_id,
+                    2,
+                    $conversation_expires_date,
+                    $db
                 );
 
                 if (!$conversation_id) {
                     return false;
                 }
 
-                $add_to_conversation = $db->insertData(
-                    "INSERT INTO {$db->table['conversation_participants']} (`conversation_id`, `user_id`, `joined_at`) VALUES (?, ?, ?)",
-                    [
-                        $conversation_id,
-                        $reservation_data['user_id'],
-                        $current_time
-                    ]
-                );
+                $add_to_conversation = $conversations_obj->add_user_to_conversation($db, $conversation_id, $user_id, $reservation_id, 1);
+
 
                 if (!$add_to_conversation) {
                     return false;
@@ -256,12 +254,55 @@ class Reservations extends Events
             }
         }
 
+        if ($event_grouping >= 2) {
+            $group_conversation = $db->getData(
+                "SELECT 
+                        c.id,
+                        c.event_id,
+                        SUM(r.group_members) AS conversation_members
+                    FROM {$db->table['conversations']} c
+                    LEFT JOIN {$db->table['conversation_participants']} cp ON c.id = cp.conversation_id
+                    LEFT JOIN {$db->table['reservations']} r ON cp.reservation_id = r.id
+                    WHERE c.event_id = ? AND c.is_group = 1 AND c.status = 'pending'",
+                [$event_id]
+            );
+
+            if ($group_conversation) {
+
+                $group_conversation_id = $group_conversation['id'];
+                $conversation_members = $group_conversation['conversation_members'];
+
+                if ($event_grouping - $conversation_members >= $group_members) {
+
+                    $add_to_conversation = $conversations_obj->add_user_to_conversation($db, $group_conversation_id, $user_id, $reservation_id, $group_members);
+
+                    if (!$add_to_conversation) {
+                        return false;
+                    }
+
+                } else {
+                    $conversation_id = $conversations_obj->create_conversation($event_title, true, $event_id, $event_grouping, $conversation_expires_date, $db);
+
+                    if (!$conversation_id) {
+                        return false;
+                    }
+
+                    $add_to_conversation = $conversations_obj->add_user_to_conversation($db, $conversation_id, $user_id, $reservation_id, $group_members);
+
+                    if (!$add_to_conversation) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        $reservation_status = $event_approval_user ? 'need-approval' : 'paid';
         $update_reservation = $db->updateData(
             "UPDATE {$db->table['reservations']} SET `status` = ?, `updated_at` = ? WHERE id = ?",
             [
-                $reservation_id,
-                'paid',
-                $current_time
+                $reservation_status,
+                $current_time,
+                $reservation_id
             ]
         );
 

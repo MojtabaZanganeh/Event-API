@@ -113,6 +113,31 @@ trait Sanitizer
                     }
                     break;
 
+                case 'national_id':
+                    $code = preg_replace('/[\s\-]/', '', $value);
+
+                    if (preg_match('/^\d{10}$/', $code)) {
+
+                        if (!preg_match('/^(\d)\1{9}$/', $code)) {
+
+                            $sum = 0;
+                            for ($i = 0; $i < 9; $i++) {
+                                $sum += ((int) $code[$i]) * (10 - $i);
+                            }
+
+                            $remainder = $sum % 11;
+                            $control = (int) $code[9];
+
+                            if (
+                                ($remainder < 2 && $control === $remainder) ||
+                                ($remainder >= 2 && $control === (11 - $remainder))
+                            ) {
+                                return $value;
+                            }
+                        }
+                    }
+                    break;
+
                 case 'password':
                     if (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $value)) {
                         return $value;

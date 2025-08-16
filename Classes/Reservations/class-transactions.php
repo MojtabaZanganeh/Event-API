@@ -78,7 +78,8 @@ class Transactions extends Reservations
             return false;
         }
 
-        $payment_url = $amount > 0 ? 'http://localhost:3000/events/demo-payment' : "http://localhost:3000/events/payment-check?Authority=$authority&Status=OK";
+        $payment_url = $_ENV['SITE_URL'];
+        $payment_url .= $amount > 0 ? "/events/demo-payment?Authority=$authority" : "/events/payment-check?Authority=$authority&Status=OK";
 
         return $payment_url;
     }
@@ -91,7 +92,6 @@ class Transactions extends Reservations
             "SELECT
                     t.id,
                     t.amount,
-                    t.ref_id,
                     t.reservation_id,
                     t.status,
                     JSON_OBJECT(
@@ -144,6 +144,7 @@ class Transactions extends Reservations
 
         $db->commit();
 
+        $payment_data['ref_id'] = $ref_id;
         $payment_data['event'] = json_decode($payment_data['event'], true);
         $payment_data['event']['image'] = $this->get_full_image_url($payment_data['event']['image']);
 

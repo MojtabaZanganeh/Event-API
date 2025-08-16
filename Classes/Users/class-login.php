@@ -1,6 +1,7 @@
 <?php
 namespace Classes\Users;
 use Classes\Base\Base;
+use Classes\Base\Error;
 use Classes\Base\Sanitizer;
 use Classes\Base\Response;
 use Classes\Users\Users;
@@ -42,15 +43,17 @@ class Login extends Users
 
         $phone = $this->check_input($params['phone'], 'phone', 'شماره همراه');
 
-        if (mb_strlen($phone, 'UTF-8') !== 11 || preg_match('/^09\d{9}$/', $phone) !== true) {
+        if (mb_strlen($phone, 'UTF-8') !== 11 || !preg_match('/^09\d{9}$/', $phone)) {
             Response::error('شماره همراه صحیح نیست');
         }
+
+        $national_id = $this->check_input($params['national_id'], 'national_id', 'کد ملی');
 
         $password = $this->check_input($params['password'], 'password', 'رمز عبور');
 
         if (mb_strlen($password, 'UTF-8') < 8) {
             Response::error('رمز عبور کوتاه است');
-        } elseif (preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $password)) {
+        } elseif (!preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/', $password)) {
             Response::error('رمز عبور باید شامل حداقل یک حرف بزرگ، یک عدد و یک نماد باشد');
         }
 
@@ -59,18 +62,24 @@ class Login extends Users
 
         $this->verify_code(['phone' => $phone, 'code' => $code, 'response' => false]);
 
-        $user = $this->get_user_by_phone($phone);
-        if ($user) {
+        $user_by_phone = $this->get_user_by_phone($phone);
+        if ($user_by_phone) {
             Response::error('شماره قبلاً ثبت شده است.');
+        }
+
+        $user_by_national_id = $this->get_id_by_national_id($national_id);
+        if ($user_by_national_id) {
+            Response::error('این کد ملی قبلا ثبت نام شده است');
         }
 
         $now = $this->current_time();
 
-        $sql = "INSERT INTO {$this->table['users']} (`username`, `first_name`, `last_name`, `phone`, `password`, `registered_at`) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO {$this->table['users']} (`username`, `first_name`, `last_name`, `national_id`, `phone`, `password`, `registered_at`) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $execute = [
             $username,
             $first_name,
             $last_name,
+            $national_id,
             $phone,
             password_hash($password, PASSWORD_DEFAULT),
             $now

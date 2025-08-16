@@ -98,7 +98,7 @@ CREATE TABLE
         status ENUM (
             'pending-pay',
             'paid',
-            'waiting-for-buddy',
+            'need-approval',
             'canceled'
         ) DEFAULT 'pending-pay' NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -230,7 +230,8 @@ CREATE TABLE
         is_group BOOLEAN DEFAULT FALSE NOT NULL,
         name VARCHAR(255),
         event_id INT UNSIGNED,
-        status ENUM ('pending-user', 'completed', 'reported') DEFAULT 'pending-user' NOT NULL,
+        conversation_size INT DEFAULT 2 NOT NULL,
+        status ENUM ('pending', 'completed', 'reported') DEFAULT 'pending' NOT NULL,
         expires_on TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (event_id) REFERENCES events (id)
@@ -242,9 +243,11 @@ CREATE TABLE
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         conversation_id INT UNSIGNED NOT NULL,
         user_id INT UNSIGNED NOT NULL,
+        reservation_id INT UNSIGNED NOT NULL,
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (conversation_id) REFERENCES conversations (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (conversation_id) REFERENCES conversations (id),
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (reservation_id) REFERENCES reservations (id)
     ) ENGINE = InnoDB;
 
 -- پیام ها

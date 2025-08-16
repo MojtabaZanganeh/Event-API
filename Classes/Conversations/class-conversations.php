@@ -1,5 +1,6 @@
 <?php
 namespace Classes\Conversations;
+use Classes\Base\Database;
 use Classes\Users\Users;
 use Classes\Base\Base;
 use Classes\Base\Response;
@@ -185,4 +186,126 @@ class Conversations extends Users
         Response::error('خطا در ارسال پیام');
     }
 
+    public function create_conversation($conversation_name, $is_group, $event_id, $conversation_size, $expires_date, Database $db)
+    {
+        $conversation_id = $db->insertData(
+            "INSERT INTO {$db->table['conversations']} (`name`, `is_group`, `event_id`, `conversation_size`, `status`, `expires_on`, `created_at`) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                $is_group,
+                $conversation_name,
+                $event_id,
+                $conversation_size,
+                'pending',
+                $expires_date,
+                $this->current_time()
+            ]
+        );
+
+        if (!$conversation_id) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function completed_conversation($conversation_id, Database $db)
+    {
+        $update_conversation = $db->updateData(
+            "UPDATE {$db->table['conversations']} 
+                        SET `status` = 'completed', `updated_at` = ? 
+                        WHERE id = ?",
+            [
+                $this->current_time(),
+                $conversation_id
+            ]
+        );
+
+        if ($update_conversation) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function add_user_to_conversation($db, $conversation_id, $user_id, $reservation_id, $group_members_count)
+    {
+        $check_user_in_conversation = $db->getData(
+            "SELECT id FROM {$db->table['conversation_participants']} WHERE `conversation_id` = ? AND `user_id` = ?",
+            [
+                $conversation_id,
+                $user_id
+            ]
+        );
+
+        if ($check_user_in_conversation) {
+            return false;
+        }
+
+        $conversation_data = $db->getData(
+            "SELECT 
+                c.conversation_size,
+                COALESCE(SUM(r.group_members), 0) AS current_members
+            FROM {$db->table['conversations']} c
+            LEFT JOIN {$db->table['conversation_participants']} cp ON c.id = cp.conversation_id
+            LEFT JOIN {$db->table['reservations']} r ON cp.reservation_id = r.id
+            WHERE c.id = ?
+            GROUP BY c.id",
+            [$conversation_id]
+        );
+
+        if (!$conversation_data) {
+            return false;
+        }
+
+        $required_size = $conversation_data['conversation_size'];
+        $current_members = $conversation_data['current_members'];
+        $new_total_members = $current_members + $group_members_count;
+
+        if ($new_total_members > $required_size) {
+            return false;
+        }
+
+        $result = $db->insertData(
+            "INSERT INTO {$db->table['conversation_participants']} 
+                (`conversation_id`, `user_id`, `reservation_id`, `joined_at`) 
+                VALUES (?, ?, ?, ?)",
+            [
+                $conversation_id,
+                $user_id,
+                $reservation_id,
+                $this->current_time()
+            ]
+        );
+
+        if (!$result) {
+            return false;
+        }
+
+        if ($new_total_members === $required_size) {
+            $update_result = $this->completed_conversation($conversation_id, $db);
+
+            if (!$update_result) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function update_conversation_status($conversation_id, $new_status, $db)
+    {
+        $update_conversation = $db->updateData(
+            "UPDATE {$db->table['conversations']} SET `status` = ? WHERE id = ?",
+            [
+                $new_status,
+                $conversation_id
+            ]
+        );
+
+        if ($update_conversation) {
+            return true;
+        }
+
+        return false;
+    }
 }

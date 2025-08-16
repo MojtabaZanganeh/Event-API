@@ -43,6 +43,14 @@ class Users extends Authentication
         return $user ? $user['id'] : null;
     }
 
+    public function get_id_by_national_id($national_id): int|null
+    {
+        $sql = "SELECT id FROM {$this->table['users']} WHERE national_id = ?";
+        $user = $this->getData($sql, [$national_id]);
+
+        return $user ? $user['id'] : null;
+    }
+
     public function get_user_by_id($user_id, $columns = self::USER_COLUMNS): array|null
     {
         $sql = "SELECT {$columns} FROM {$this->table['users']} WHERE id = ?";
@@ -57,6 +65,7 @@ class Users extends Authentication
 
         return $user ?: null;
     }
+    
 
     public function check_password($phone, $password): bool
     {
